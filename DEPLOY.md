@@ -1,5 +1,77 @@
 # Putting Guardian Library on the internet
 
+> **Chosen route: GitHub Actions + GitHub Pages.** Collection runs on GitHub's
+> machines on a schedule, the shelves are published as a static site, and the
+> whole thing costs nothing. The trade-off is that a static page cannot accept
+> writes: Insights, starring, mark-as-read and on-demand Summarise are not part
+> of the published copy. Run the portal locally when you want those.
+>
+> **Read "One thing to settle first" below before publishing** - a GitHub Pages
+> site built from a private repo is still publicly readable on a Free or Pro
+> plan, which matters here.
+
+## One thing to settle first: Pages is public
+
+Making the repository private protects the *code and the fund list*. It does not
+make the published site private: on GitHub Free and Pro, Pages sites are public
+even when the repo is private (private Pages is an Enterprise feature). Anyone
+with the URL could read which products you hold and which you have exited.
+
+Two ways to deal with that:
+
+- **Put Cloudflare Access in front of it.** Publish the same `site/` folder to
+  Cloudflare Pages instead, and turn on Access with an email policy. Free for up
+  to 50 users, and colleagues sign in with their work email. This is the option
+  I would pick.
+- **Accept it.** The individual videos and factsheets are public material
+  anyway; what leaks is the shape of your book - the shelf names say outright
+  which products are held and which were exited. Only you can judge whether that
+  matters.
+
+## The scheduled job
+
+`.github/workflows/collect.yml` runs daily at 02:00 UTC (07:30 IST) and can be
+triggered by hand from the **Actions** tab with **Run workflow** - that is the
+fetch-now button. Each run:
+
+1. collects videos and newsletters (no failure stops the rest),
+2. rebuilds the static site,
+3. commits `data/library.db` back to the repo,
+4. publishes to Pages.
+
+Step 3 matters: the database holds `last_checked` for every source. Without it
+each run would think it had never polled, redo the six-month backfill, and
+exhaust the YouTube quota within a day or two.
+
+Set one repository secret, under Settings -> Secrets and variables -> Actions:
+
+| Secret | Value |
+|---|---|
+| `YOUTUBE_API_KEY` | the key from your local `.env` |
+
+Then Settings -> Pages -> Source -> **GitHub Actions**.
+
+A run takes two or three minutes. A private repo gets 2,000 free Actions minutes
+a month, so a daily run uses about 3% of the allowance.
+
+## What the published copy cannot do
+
+Insights, starring, mark-as-read and Summarise all write to the database, and a
+static page has nowhere to write to. They are left out of the build rather than
+shipped as buttons that quietly do nothing. Everything else - three shelves, the
+newsletter archive by house, the analysis tab, the filters already applied -
+is there.
+
+Summaries you generate locally *do* appear on the published site, because they
+live in the database that gets committed. Run them on your machine through the
+Claude Code provider, push, and the next build picks them up.
+
+## The original Render route
+
+Everything below still applies if you later want the live app with Insights
+working.
+
+
 Fifteen minutes, start to finish. Everything in the repo is ready; the steps
 below are the ones that need your accounts, which is why they are not automated.
 

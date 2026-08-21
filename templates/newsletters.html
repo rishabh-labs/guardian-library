@@ -12,6 +12,7 @@
 {%- endmacro %}
 
 {% block content %}
+{% if not cfg.STATIC_EXPORT %}
 <form class="filters" method="get">
   <select name="house" onchange="this.form.submit()">
     <option value="">All fund houses</option>
@@ -36,6 +37,7 @@
   <div class="spacer"></div>
   <span class="quiet">{{ total }} newsletter(s) · {{ houses|length }} house(s)</span>
 </form>
+{% endif %}
 
 {% if not configured %}
   <div class="flash">
@@ -77,10 +79,12 @@
                     {% endif %}
                   </div>
                 {% endif %}
-                {{ insight_block(n.id, insights.get(n.id, [])) }}
+                {% if not cfg.STATIC_EXPORT %}{{ insight_block(n.id, insights.get(n.id, [])) }}{% endif %}
               </td>
               <td style="white-space:nowrap">
-                {% if n.id in analysed %}
+                {% if cfg.STATIC_EXPORT %}
+                  <a class="btn ghost sm" href="{{ n.url }}" target="_blank" rel="noopener">Open</a>
+                {% elif n.id in analysed %}
                   <a class="btn ghost sm" href="{{ url_for('analysis', q=n.title[:40]) }}">Full analysis</a>
                 {% else %}
                   <button class="btn sm" {{ 'disabled' if not configured }}

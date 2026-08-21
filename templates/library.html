@@ -20,7 +20,7 @@
       {%- endif -%}
     </span>
     <div style="flex:1"></div>
-    {% if nl_counts.latest_period %}
+    {% if nl_counts.latest_period and not cfg.STATIC_EXPORT %}
       <a class="btn sm" href="{{ url_for('newsletters', period=nl_counts.latest_period) }}">
         This month</a>
     {% endif %}
@@ -41,7 +41,10 @@
     {% endfor %}
   {% else %}
     <p class="hint" style="margin:10px 0 0">
-      {% if nl_counts.this_month %}
+      {% if cfg.STATIC_EXPORT %}
+        {{ nl_counts.total }} newsletter(s) collected.
+        <a href="{{ url_for('newsletters') }}">Browse the archive</a>.
+      {% elif nl_counts.this_month %}
         {{ nl_counts.this_month }} newsletter(s) came in this month. Open
         <a href="{{ url_for('newsletters', period=nl_counts.latest_period) }}">this month</a>
         and press <strong>Summarise</strong> on the ones worth reading — summaries
@@ -64,6 +67,7 @@
   {% endif %}{% endfor %}
 </h1>
 
+{% if not cfg.STATIC_EXPORT %}
 <form class="filters" method="get">
   <select name="fund" onchange="this.form.submit()">
     <option value="">All funds</option>
@@ -87,6 +91,7 @@
     {% endif %}
   </div>
 </form>
+{% endif %}
 
 <p class="quiet" style="margin:-6px 0 16px">
   {%- if not show_all %}
@@ -99,12 +104,13 @@
       {{ shelf_hidden.third_party }} video(s) about these funds by other people
       hidden — only the managers' own appearances are shown.
     {% endif %}
-    <a href="{{ url_for('shelf', bucket=bucket, **dict(filters, all='1')) }}">Show everything</a>
+    {% if not cfg.STATIC_EXPORT %}<a href="{{ url_for('shelf', bucket=bucket, **dict(filters, all='1')) }}">Show everything</a>{% endif %}
   {%- else %}
     Showing all lengths and languages.
     <a href="{{ url_for('shelf', bucket=bucket, **dict(filters, all='')) }}">Back to English, {{ min_minutes }} min+</a>
   {%- endif %}
-  {% if promo_hidden and not show_promo %}
+  {% if cfg.STATIC_EXPORT %}
+  {% elif promo_hidden and not show_promo %}
     · {{ promo_hidden }} promotional item(s) hidden —
     <a href="{{ url_for('shelf', bucket=bucket, **dict(filters, promo='1')) }}">show</a>
   {% elif show_promo %}
@@ -119,7 +125,7 @@
       <article class="card {{ 'unseen' if not it.seen }}" id="item-{{ it.id }}">
         {% if it.thumbnail %}
           <a class="thumb" href="{{ it.url }}" target="_blank" rel="noopener"
-             onclick="markSeen({{ it.id }})">
+             {% if not cfg.STATIC_EXPORT %}onclick="markSeen({{ it.id }})"{% endif %}>
             <img src="{{ it.thumbnail }}" alt="" loading="lazy">
           </a>
         {% endif %}
@@ -143,7 +149,7 @@
           </div>
           <h3>
             <a href="{{ it.url }}" target="_blank" rel="noopener"
-               onclick="markSeen({{ it.id }})">{{ it.title }}</a>
+               {% if not cfg.STATIC_EXPORT %}onclick="markSeen({{ it.id }})"{% endif %}>{{ it.title }}</a>
           </h3>
           {% if it.summary %}<div class="sum">{{ it.summary[:180] }}{% if it.summary|length > 180 %}…{% endif %}</div>{% endif %}
           <div class="meta">
@@ -151,6 +157,7 @@
             <span>{{ it.published_at | when }}</span>
           </div>
           <div class="foot">
+            {% if not cfg.STATIC_EXPORT %}
             <button class="star {{ 'on' if it.starred }}"
                     onclick="toggleStar(this, {{ it.id }})"
                     title="Star for the next review">★</button>
@@ -165,18 +172,21 @@
             {% endif %}
             <div style="flex:1"></div>
             {{ insight_block(it.id, insights.get(it.id, [])) }}
+            {% endif %}
           </div>
         </div>
       </article>
     {% endfor %}
   </div>
 
+  {% if not cfg.STATIC_EXPORT %}
   <div class="pager">
     <a class="btn ghost {{ 'disabled' if page <= 1 }}"
        href="{{ url_for('shelf', bucket=bucket, **dict(filters, page=page-1)) }}">← Newer</a>
     <a class="btn ghost {{ 'disabled' if not has_next }}"
        href="{{ url_for('shelf', bucket=bucket, **dict(filters, page=page+1)) }}">Older →</a>
   </div>
+  {% endif %}
 {% else %}
   <div class="empty">
     <h2>Nothing here yet</h2>

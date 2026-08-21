@@ -19,8 +19,10 @@
          class="{{ 'on' if request.endpoint == 'newsletters' }}">Newsletters</a>
       <a href="{{ url_for('analysis') }}"
          class="{{ 'on' if request.endpoint == 'analysis' }}">Analysis</a>
-      <a href="{{ url_for('admin') }}"
-         class="{{ 'on' if request.endpoint == 'admin' }}">Admin</a>
+      {% if not cfg.STATIC_EXPORT %}
+        <a href="{{ url_for('admin') }}"
+           class="{{ 'on' if request.endpoint == 'admin' }}">Admin</a>
+      {% endif %}
     </nav>
     <div class="spacer"></div>
     {% if last_run %}

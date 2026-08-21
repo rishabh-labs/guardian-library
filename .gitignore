@@ -3,6 +3,13 @@ data/
 *.db
 *.db-wal
 *.db-shm
+# ...except the library itself, which the scheduled job commits back. It holds
+# last_checked for every source; without it each run would redo the six-month
+# backfill and exhaust the YouTube quota.
+!data/library.db
+
+# Built by export_static.py and published from the workflow, never committed.
+site/
 __pycache__/
 *.pyc
 .venv/

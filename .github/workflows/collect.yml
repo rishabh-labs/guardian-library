@@ -1,0 +1,78 @@
+name: Collect and publish
+
+# Runs the whole library on GitHub's machines, so nothing has to be switched on
+# at the office. Free: a run takes two or three minutes, and a private repo gets
+# 2,000 minutes a month.
+on:
+  schedule:
+    # 02:00 UTC = 07:30 IST, so the day starts with the overnight publications
+    # already collected.
+    - cron: "0 2 * * *"
+  # Adds a "Run workflow" button on the Actions tab - the fetch-now button.
+  workflow_dispatch:
+
+# One run at a time. Two concurrent runs would both commit the database and the
+# second would fail on a stale ref.
+concurrency:
+  group: collect
+  cancel-in-progress: false
+
+permissions:
+  contents: write        # commit the updated database back
+  pages: write           # publish the static site
+  id-token: write        # required by deploy-pages
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      # No Claude Code on a build runner, so the rules do the sorting here.
+      # Ambiguous videos stay visible rather than being wrongly hidden.
+      ANALYSIS_PROVIDER: api
+      ENABLE_SCHEDULER: "0"
+      PYTHONIOENCODING: utf-8
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Collect
+        # Never fail the run on a collection error. One fund house returning 403
+        # must not stop the site being rebuilt and published from what we have.
+        run: python refresh.py || echo "collection had failures - continuing"
+
+      - name: Build the static site
+        run: python export_static.py --out site
+
+      - name: Commit the updated database
+        # The database carries last_checked for every source. Without it each
+        # run would think it had never polled, redo the six-month backfill, and
+        # exhaust the YouTube quota within a couple of days.
+        run: |
+          git config user.name "guardian-library-bot"
+          git config user.email "noreply@github.com"
+          git add -f data/library.db
+          if git diff --cached --quiet; then
+            echo "nothing collected this run"
+          else
+            git commit -m "Collected $(date -u '+%Y-%m-%d %H:%M UTC') [skip ci]"
+            git push
+          fi
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4

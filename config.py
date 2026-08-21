@@ -100,6 +100,12 @@ CLASSIFY_MODEL = os.environ.get("CLASSIFY_MODEL", "claude-haiku-4-5")
 #                    logged in, so: the laptop, not a cloud server.
 ANALYSIS_PROVIDER = os.environ.get("ANALYSIS_PROVIDER", "api")
 
+# Rendering the portal to flat HTML files for a static host. A static page
+# cannot accept writes, so the controls that post back - insights, starring,
+# mark-as-read, Summarise, the filter form - are left out rather than shipped
+# as buttons that silently do nothing.
+STATIC_EXPORT = os.environ.get("STATIC_EXPORT", "0") == "1"
+
 # Full path to claude.exe. Left blank, the portal looks on PATH and then in the
 # desktop app's versioned install directory.
 CLAUDE_CLI_PATH = os.environ.get("CLAUDE_CLI_PATH", "")
