@@ -923,7 +923,10 @@ def finish_run(run_id, new_items, ok, fail, detail=""):
         conn.execute(
             """UPDATE runs SET finished_at=?, new_items=?, sources_ok=?,
                sources_fail=?, detail=? WHERE id=?""",
-            (now_iso(), new_items, ok, fail, json.dumps(detail)[:4000], run_id))
+            # The detail lines are per-source error strings, which carry the
+            # request URL and therefore the API key - redact before storing.
+            (now_iso(), new_items, ok, fail,
+             redact(json.dumps(detail))[:4000], run_id))
     conn.close()
 
 
