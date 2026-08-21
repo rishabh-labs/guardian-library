@@ -2,6 +2,7 @@
 add deployment weight."""
 import html
 import json
+import re
 import os
 import sqlite3
 from datetime import datetime, timezone
@@ -276,6 +277,27 @@ def toggle_source(source_id):
     conn.close()
 
 
+SECRET_IN_URL = re.compile(
+    r"(^|[?&\s])((?:key|api[_-]?key|token|access[_-]?token|password|secret)=)"
+    r"[^&\s]+", re.I)
+
+
+def redact(text):
+    """Strip credentials out of text before it is stored.
+
+    An HTTP error carries the full request URL, and for the YouTube API that
+    URL contains the API key. Stored verbatim it ends up in the database, which
+    is committed to the repository and rendered in Admin - so the key leaks
+    into two places nobody would think to look.
+    """
+    text = SECRET_IN_URL.sub(r"\1<redacted>", str(text or ""))
+    for secret in (config.YOUTUBE_API_KEY, config.ANTHROPIC_API_KEY,
+                   config.ADMIN_PASSWORD, config.VIEWER_PASSWORD):
+        if secret and len(secret) > 8:
+            text = text.replace(secret, "<redacted>")
+    return text
+
+
 def mark_source_status(source_id, status):
     """Record a status WITHOUT marking the source as polled.
 
@@ -286,7 +308,7 @@ def mark_source_status(source_id, status):
     conn = connect()
     with conn:
         conn.execute("UPDATE sources SET last_status = ? WHERE id = ?",
-                     (status[:200], source_id))
+                     (redact(status)[:200], source_id))
     conn.close()
 
 
@@ -295,7 +317,7 @@ def mark_source_checked(source_id, status):
     with conn:
         conn.execute(
             "UPDATE sources SET last_checked = ?, last_status = ? WHERE id = ?",
-            (now_iso(), status[:200], source_id))
+            (now_iso(), redact(status)[:200], source_id))
     conn.close()
 
 
