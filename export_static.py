@@ -72,6 +72,11 @@ def build(outdir):
     # nothing and removes a whole class of confusing absence.
     open(os.path.join(outdir, ".nojekyll"), "w").close()
 
+    # The site is deliberately readable by anyone holding the link, but there
+    # is no reason for it to be indexed and searchable as well.
+    with open(os.path.join(outdir, "robots.txt"), "w", encoding="utf-8") as fh:
+        fh.write("User-agent: *\nDisallow: /\n")
+
     print(f"\n{written} page(s) written to {outdir}")
     return 0
 

@@ -6,27 +6,24 @@
 > writes: Insights, starring, mark-as-read and on-demand Summarise are not part
 > of the published copy. Run the portal locally when you want those.
 >
-> **Read "One thing to settle first" below before publishing** - a GitHub Pages
-> site built from a private repo is still publicly readable on a Free or Pro
-> plan, which matters here.
+## Visibility: decided
 
-## One thing to settle first: Pages is public
+The published site is **public**. On GitHub Free and Pro a Pages site is
+readable by anyone with the link even when the repo behind it is private
+(private Pages is an Enterprise feature). That was raised and accepted on
+2026-08-21: the videos and factsheets are public material anyway, and the shelf
+labels are the only thing that reveals the shape of the book.
 
-Making the repository private protects the *code and the fund list*. It does not
-make the published site private: on GitHub Free and Pro, Pages sites are public
-even when the repo is private (private Pages is an Enterprise feature). Anyone
-with the URL could read which products you hold and which you have exited.
+The repository itself stays private - it holds `Lists.xlsx`.
 
-Two ways to deal with that:
+Two things follow from the decision, both already in place:
 
-- **Put Cloudflare Access in front of it.** Publish the same `site/` folder to
-  Cloudflare Pages instead, and turn on Access with an email policy. Free for up
-  to 50 users, and colleagues sign in with their work email. This is the option
-  I would pick.
-- **Accept it.** The individual videos and factsheets are public material
-  anyway; what leaks is the shape of your book - the shelf names say outright
-  which products are held and which were exited. Only you can judge whether that
-  matters.
+- Every published page carries `noindex, nofollow, noarchive`, and the site
+  serves a `robots.txt` that disallows everything. Readable by link, not
+  findable by search - a fund house cannot stumble on it by googling its name.
+- If you later want it genuinely private, publish the same `site/` folder to
+  Cloudflare Pages and turn on Access with an email policy. Free for up to 50
+  users, and nothing about the build changes.
 
 ## The scheduled job
 

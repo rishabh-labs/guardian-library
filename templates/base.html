@@ -4,6 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Guardian Library{% endblock %}</title>
+  {% if cfg.STATIC_EXPORT %}
+    {# Readable by anyone with the link, by choice - but not something a fund
+       house should find by searching its own name. #}
+    <meta name="robots" content="noindex, nofollow, noarchive">
+  {% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
