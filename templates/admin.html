@@ -45,7 +45,13 @@
     </p>
   {% endif %}
   <form method="post" action="{{ url_for('refresh_now') }}">
-    <button class="btn" type="submit">Refresh now</button>
+    <button class="btn" type="submit">Fetch latest now</button>
+    <span class="quiet" style="margin-left:10px">
+      Collects videos and newsletters, then sorts anything the rules could not
+      call. Costs nothing — YouTube's free allowance and
+      {% if cfg.ANALYSIS_PROVIDER == 'claude_code' %}the Claude Code
+      subscription on this machine{% else %}the configured API key{% endif %}.
+    </span>
   </form>
 </div>
 

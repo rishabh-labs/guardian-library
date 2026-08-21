@@ -9,8 +9,9 @@ Three signals, cheapest first:
 
 1. Title rules      - free, deterministic, catches the obvious cases
 2. Video duration   - needs the YouTube key, 1 quota unit per 50 videos
-3. Claude, on the   - only for the genuinely ambiguous middle, and only if a
-   remaining cases     key is set
+3. Claude, on the   - only for the genuinely ambiguous middle, sent as one
+   remaining cases     batch. Runs through providers.py, so with Claude Code
+                       signed in locally it costs nothing
 
 Anything still unresolved is left as research rather than hidden. Wrongly
 hiding a real manager video is far worse than letting a promo through.
@@ -21,6 +22,7 @@ import re
 import config
 import db
 import language
+import providers
 import speaker
 from collectors import util
 
@@ -228,30 +230,58 @@ CLASSIFY_TOOL = {
 }
 
 
-def _model_verdict(title, description, author):
-    if not config.ANTHROPIC_API_KEY:
-        return None
+def pending_ambiguous(limit=60):
+    """Videos the rules left at 'unclear - kept', oldest first."""
+    conn = db.connect()
+    rows = conn.execute(
+        """SELECT id, title, author, summary AS description FROM items
+           WHERE kind IN ('video', 'podcast')
+             AND classify_why LIKE '%unclear - kept%'
+           ORDER BY id LIMIT ?""", (limit,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def resolve_ambiguous(rows, limit=None):
+    """Ask Claude about the videos the rules could not call.
+
+    Sent as one batch, and only for genuinely ambiguous items - the rules
+    settle the large majority on their own. Runs through whichever provider is
+    configured, so on a machine with Claude Code signed in this costs nothing.
+
+    rows: [{"id": int, "title": str, "author": str, "description": str}]
+    Returns the number of verdicts applied.
+    """
+    rows = [r for r in rows if r.get("title")]
+    if not rows:
+        return 0
+    if limit:
+        rows = rows[:limit]
+
+    ok, why = providers.available()
+    if not ok:
+        log.info("no classifier available (%s) - ambiguous items kept", why)
+        return 0
+
+    by_n = {i: r for i, r in enumerate(rows, start=1)}
+    records = [{"n": n, "title": r["title"], "author": r.get("author", ""),
+                "description": r.get("description", "")}
+               for n, r in by_n.items()]
     try:
-        import anthropic
-        client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
-        resp = client.messages.create(
-            model=config.CLASSIFY_MODEL,
-            max_tokens=200,
-            system=("You sort a fund house's video output for an analyst who "
-                    "wants only substantive commentary. When genuinely "
-                    "uncertain, answer 'research' - missing a real manager "
-                    "video costs more than letting a promo through."),
-            tools=[CLASSIFY_TOOL],
-            tool_choice={"type": "tool", "name": "classify"},
-            messages=[{"role": "user", "content":
-                       f"Channel: {author}\nTitle: {title}\n\n"
-                       f"Description:\n{description[:1500]}"}],
-        )
-        payload = next(b.input for b in resp.content if b.type == "tool_use")
-        return payload["category"], payload.get("reason", "")
+        verdicts = providers.classify_batch(records)
     except Exception as exc:
-        log.warning("classifier model call failed: %s", exc)
-        return None
+        log.warning("batch classification failed: %s", exc)
+        return 0
+
+    applied = 0
+    for n, (category, reason) in verdicts.items():
+        row = by_n.get(n)
+        if not row:
+            continue
+        db.set_content_type(row["id"], category, f"model: {reason}")
+        applied += 1
+    log.info("classified %d ambiguous item(s) as promo/research", applied)
+    return applied
 
 
 # --- entry point --------------------------------------------------------
@@ -269,13 +299,8 @@ def classify_video(title, description="", author="", managers=(),
     if score <= -2:
         return "promo", "; ".join(reasons)
 
-    # Ambiguous. Ask the model if we can, otherwise keep it.
-    if allow_model:
-        verdict = _model_verdict(title, description, author)
-        if verdict:
-            category, why = verdict
-            return category, f"model: {why}"
-
+    # Ambiguous. Keep it for now and mark it so resolve_ambiguous() can pick it
+    # up; a batched call settles all of them at once rather than one at a time.
     return "research", "; ".join(reasons + ["unclear - kept"]) or "unclear - kept"
 
 
@@ -344,4 +369,10 @@ def run_pending(limit=200):
                  who, who_why[:200], r["id"]))
     conn.close()
     log.info("classified: %s", counts)
+
+    # Whatever the rules could not call gets settled in a single batch.
+    settled = resolve_ambiguous(pending_ambiguous())
+    if settled:
+        counts["reclassified"] = settled
+
     return counts

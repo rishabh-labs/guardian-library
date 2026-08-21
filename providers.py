@@ -101,7 +101,6 @@ def summarise_via_claude_code(system, context, text, tool_schema):
     prompt and the JSON is parsed back out. Everything else - the system prompt,
     the fields, the output shape - matches the API path exactly.
     """
-    exe = find_claude_cli()
     shape = json.dumps(tool_schema["input_schema"]["properties"], indent=2)
     prompt = (
         f"{system}\n\n"
@@ -112,6 +111,12 @@ def summarise_via_claude_code(system, context, text, tool_schema):
         f"{context}\n---\n\n{text}"
     )
 
+    return _parse_payload(_run_claude_code(prompt))
+
+
+def _run_claude_code(prompt):
+    """Send one prompt through headless Claude Code, return the reply text."""
+    exe = find_claude_cli()
     cmd = [exe, "-p", "--output-format", "json"]
     if config.CLAUDE_CLI_MODEL:
         cmd += ["--model", config.CLAUDE_CLI_MODEL]
@@ -137,7 +142,7 @@ def summarise_via_claude_code(system, context, text, tool_schema):
     if envelope.get("is_error"):
         raise ProviderError(_explain_failure(proc, envelope))
 
-    return _parse_payload(envelope.get("result", ""))
+    return envelope.get("result", "")
 
 
 def _explain_failure(proc, envelope=None):
@@ -155,17 +160,91 @@ def _explain_failure(proc, envelope=None):
     return f"Claude Code failed: {detail}"
 
 
+CLASSIFY_INSTRUCTION = """You sort a fund house's video output for an analyst who
+wants only substantive commentary.
+
+'research' - a fund manager or analyst discussing markets, strategy, portfolio
+positioning, or teaching an investing concept.
+'promo' - marketing: a scheme launch or NFO, a festival greeting, an award or
+milestone, a call to invest, or short filler content.
+
+When genuinely uncertain answer 'research': missing a real manager video costs
+more than letting a promo through."""
+
+
+def classify_batch(records):
+    """Sort a batch of ambiguous videos into research or promo.
+
+    One call for the whole batch rather than one per video. Spawning Claude
+    Code 48 times would take minutes and burn subscription quota for what is
+    a handful of tokens of judgement each.
+
+    records: [{"n": int, "title": str, "author": str, "description": str}]
+    returns: {n: (category, reason)} - only for entries the model answered.
+    """
+    if not records:
+        return {}
+
+    listing = "\n\n".join(
+        f"[{r['n']}] Channel: {r.get('author', '')}\n"
+        f"Title: {r['title']}\n"
+        f"Description: {(r.get('description') or '')[:400]}"
+        for r in records)
+
+    prompt = (
+        f"{CLASSIFY_INSTRUCTION}\n\n"
+        f"Sort each of the {len(records)} videos below.\n\n"
+        "Reply with a single JSON object and nothing else - no markdown fence, "
+        'no commentary. Shape: {"verdicts": [{"n": <the number in brackets>, '
+        '"category": "research" or "promo", "reason": "under 10 words"}]}\n'
+        "Include every video exactly once.\n\n"
+        f"{listing}")
+
+    if config.ANALYSIS_PROVIDER == "claude_code":
+        raw = _run_claude_code(prompt)
+    else:
+        raw = _run_api_text(prompt)
+
+    payload = _extract_json(raw)
+    out = {}
+    for v in payload.get("verdicts", []):
+        try:
+            n = int(v["n"])
+            category = str(v["category"]).strip().lower()
+        except (KeyError, TypeError, ValueError):
+            continue
+        if category in ("research", "promo"):
+            out[n] = (category, str(v.get("reason", ""))[:120])
+    return out
+
+
+def _run_api_text(prompt):
+    if not config.ANTHROPIC_API_KEY:
+        raise ProviderError("ANTHROPIC_API_KEY is not set")
+    import anthropic
+    client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
+    resp = client.messages.create(
+        model=config.CLASSIFY_MODEL, max_tokens=4000,
+        messages=[{"role": "user", "content": prompt}])
+    return "".join(b.text for b in resp.content if b.type == "text")
+
+
 def _parse_payload(raw):
     """Pull the JSON object out of the model's reply.
 
     Tolerates a markdown fence or a stray sentence around it, because a
     conversational CLI is less strictly bound than a forced tool call.
     """
+    return {k: _extract_json(raw).get(k) for k in FIELDS}
+
+
+def _extract_json(raw):
+    """Recover the JSON object from a reply that may be wrapped in prose."""
     raw = (raw or "").strip()
     if not raw:
         raise ProviderError("Claude Code returned nothing")
 
-    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, re.S)
+    fenced = re.search(r"```(?:json)?\s*(\{.*\})\s*```", raw, re.S)
     candidate = fenced.group(1) if fenced else raw
     if not candidate.lstrip().startswith("{"):
         start, end = candidate.find("{"), candidate.rfind("}")
@@ -180,7 +259,7 @@ def _parse_payload(raw):
 
     if not isinstance(payload, dict):
         raise ProviderError("reply was not a JSON object")
-    return {k: payload.get(k) for k in FIELDS}
+    return payload
 
 
 def summarise_via_api(system, context, text, tool_schema):

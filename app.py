@@ -425,6 +425,9 @@ def refresh_now():
     result = refresh_cycle()
     msg = (f"Refresh done — {result['new_items']} new item(s), "
            f"{result['ok']} source(s) ok, {result['failed']} failed.")
+    reclassified = (result.get("classified") or {}).get("reclassified")
+    if reclassified:
+        msg += f" {reclassified} ambiguous video(s) sorted by Claude."
     if result.get("analysis"):
         a = result["analysis"]
         msg += (f" Analysis: {a['done']} summarised, {a['skipped']} skipped, "
