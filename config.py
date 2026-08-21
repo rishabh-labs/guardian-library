@@ -90,7 +90,7 @@ ANALYSIS_MODEL = os.environ.get("ANALYSIS_MODEL", "claude-sonnet-5")
 
 # Promo-vs-research sorting is a small judgement call on a title and blurb, so
 # it runs on a cheaper model than the summaries and only on ambiguous cases.
-CLASSIFY_MODEL = os.environ.get("CLASSIFY_MODEL", "claude-haiku-4-5-20251001")
+CLASSIFY_MODEL = os.environ.get("CLASSIFY_MODEL", "claude-haiku-4-5")
 
 # Hide promotional videos from the Library by default. The "Show promotional"
 # toggle reveals them; nothing is ever deleted.
