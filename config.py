@@ -65,6 +65,23 @@ ENABLE_SCHEDULER = os.environ.get("ENABLE_SCHEDULER", "1") == "1"
 BACKFILL_DAYS = int(os.environ.get("BACKFILL_DAYS", "180"))
 INCREMENTAL_DAYS = int(os.environ.get("INCREMENTAL_DAYS", "30"))
 
+# --- YouTube quota budget -----------------------------------------------
+# A keyword search costs 100 units against a free allowance of 10,000/day.
+# Channel feeds and newsletters are free, so only the searches need rationing.
+#
+# Running every source on every 30-minute cycle meant 24 searches x 48 cycles a
+# day = 115,200 units, which exhausted the day's quota within about two hours
+# and left every later poll returning 429. Searches now run at most once a day;
+# the free sources keep their fast cadence.
+SEARCH_MIN_HOURS = int(os.environ.get("SEARCH_MIN_HOURS", "20"))
+
+# How many pages of search results to walk. Newest-first, so this only matters
+# while filling the six-month backfill; paging stops early once results fall
+# outside the window. Worst case 3 x 100 units per manager, so a full
+# 24-manager backfill fits inside one day of free quota with room to spare.
+SEARCH_MAX_PAGES = int(os.environ.get("SEARCH_MAX_PAGES", "3"))
+
+
 # --- Analysis tab -------------------------------------------------------
 # Claude API key. Without it the dashboard still works; the Analysis tab just
 # shows "not configured" instead of summaries.

@@ -193,14 +193,38 @@ def collect_search(source):
         "q": source["value"],
         "type": "video",
         "order": "date",
-        "maxResults": 25,
+        "maxResults": 50,          # 50 is the API maximum, and costs the same
         "relevanceLanguage": "en",
     }
-    data = util.fetch(SEARCH_API, params=params).json()
     terms = util.match_terms_for(source)
     window = util.window_days(source)
     out = []
-    for it in data.get("items", []):
+
+    # Results come back newest-first, so walk pages until they fall out of the
+    # window. Without this the search only ever saw the newest page: for a
+    # manager who appears on television every week, one page can cover a
+    # fortnight, and the six-month backfill silently never happened.
+    for page in range(config.SEARCH_MAX_PAGES):
+        data = util.fetch(SEARCH_API, params=params).json()
+        items = data.get("items", [])
+        if not items:
+            break
+        out.extend(_search_page(items, source, terms, window))
+        oldest = min((util.parse_date(i["snippet"].get("publishedAt")) or ""
+                      for i in items), default="")
+        if util.too_old(oldest, window):
+            break                   # this page already ran past the window
+        token = data.get("nextPageToken")
+        if not token:
+            break
+        params = dict(params, pageToken=token)
+    return out
+
+
+def _search_page(items, source, terms, window):
+    """Turn one page of search hits into items, dropping what doesn't belong."""
+    out = []
+    for it in items:
         sn = it["snippet"]
         vid = it["id"].get("videoId")
         if not vid:

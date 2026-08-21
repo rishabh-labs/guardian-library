@@ -1,6 +1,9 @@
 """Collector registry and the run loop."""
 import logging
 import traceback
+from datetime import datetime, timezone
+
+from dateutil import parser as dateparser
 
 import config
 import db
@@ -32,6 +35,29 @@ SOURCE_KINDS = list(REGISTRY.keys())
 
 class Skipped(Exception):
     """Source cannot run for a known, non-error reason - e.g. no API key."""
+
+
+def due(source):
+    """False when a quota-costing source was polled too recently.
+
+    Only YouTube keyword searches cost anything: 100 units each against a free
+    10,000/day. Channel feeds, newsletters and podcasts are free and keep the
+    fast cadence. A source that has never run successfully is always due, so a
+    new fund still gets its backfill immediately.
+    """
+    if source["kind"] != "youtube_search":
+        return True
+    last = source.get("last_checked")
+    if not last:
+        return True
+    try:
+        when = dateparser.parse(last)
+    except (ValueError, TypeError):
+        return True
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    age_hours = (datetime.now(timezone.utc) - when).total_seconds() / 3600
+    return age_hours >= config.SEARCH_MIN_HOURS
 
 
 def run_source(source):
@@ -67,6 +93,10 @@ def run_all():
         if src["kind"] not in REGISTRY:
             db.mark_source_checked(src["id"], f"unknown kind {src['kind']}")
             fail += 1
+            continue
+        if not due(src):
+            # Polled within the quota window; leave it alone this cycle.
+            skipped += 1
             continue
         try:
             new, status = run_source(src)
