@@ -283,7 +283,7 @@ def newsletters():
         analysed=db.analysed_item_ids(),
         summaries=db.summaries_by_item(ids),
         insights=db.insights_for(ids),
-        configured=bool(config.ANTHROPIC_API_KEY),
+        configured=analyse.configured()[0],
         filters={"house": house or "", "period": period or "", "q": search or ""},
         total=total,
     )
@@ -305,7 +305,7 @@ def analysis():
         analyses=rows[:per_page],
         funds=db.list_funds(),
         stats=db.analysis_stats(),
-        configured=bool(config.ANTHROPIC_API_KEY),
+        configured=analyse.configured()[0],
         model=config.ANALYSIS_MODEL,
         filters={"fund": fund_id, "q": search or ""},
         page=page, has_next=has_next,
@@ -315,8 +315,9 @@ def analysis():
 @app.post("/item/<int:item_id>/analyse")
 def analyse_one(item_id):
     """Summarise a single item on demand, e.g. after a failed first attempt."""
-    if not config.ANTHROPIC_API_KEY:
-        return jsonify(error="ANTHROPIC_API_KEY is not configured"), 400
+    ok, why = analyse.configured()
+    if not ok:
+        return jsonify(error=why), 400
     item = db.get_item(item_id)
     if not item:
         return jsonify(error="no such item"), 404

@@ -92,6 +92,24 @@ ANALYSIS_MODEL = os.environ.get("ANALYSIS_MODEL", "claude-sonnet-5")
 # it runs on a cheaper model than the summaries and only on ambiguous cases.
 CLASSIFY_MODEL = os.environ.get("CLASSIFY_MODEL", "claude-haiku-4-5")
 
+# Where summaries come from:
+#   "api"          - the Anthropic API, billed per token against prepaid credit
+#   "claude_code"  - the Claude Code CLI already signed in on this machine,
+#                    which draws on the Claude subscription and costs nothing
+#                    extra. Only works where Claude Code is installed and
+#                    logged in, so: the laptop, not a cloud server.
+ANALYSIS_PROVIDER = os.environ.get("ANALYSIS_PROVIDER", "api")
+
+# Full path to claude.exe. Left blank, the portal looks on PATH and then in the
+# desktop app's versioned install directory.
+CLAUDE_CLI_PATH = os.environ.get("CLAUDE_CLI_PATH", "")
+
+# Blank means whatever model Claude Code is currently set to.
+CLAUDE_CLI_MODEL = os.environ.get("CLAUDE_CLI_MODEL", "")
+
+# A newsletter takes well under a minute; the ceiling is for a stuck process.
+CLAUDE_CLI_TIMEOUT = int(os.environ.get("CLAUDE_CLI_TIMEOUT", "300"))
+
 # Hide promotional videos from the Library by default. The "Show promotional"
 # toggle reveals them; nothing is ever deleted.
 HIDE_PROMO = os.environ.get("HIDE_PROMO", "1") == "1"

@@ -1,4 +1,7 @@
-"""Summarise an item with the Claude API.
+"""Summarise an item.
+
+The summariser itself lives in providers.py - either the paid API or the
+local Claude Code CLI, chosen by ANALYSIS_PROVIDER.
 
 Output is forced through a tool schema so we always get the same fields back and
 never have to parse prose.
@@ -8,6 +11,7 @@ import logging
 import config
 import db
 import extract
+import providers
 
 log = logging.getLogger("analyse")
 
@@ -79,11 +83,16 @@ TOOL = {
 }
 
 
-def _client():
-    if not config.ANTHROPIC_API_KEY:
-        raise RuntimeError("ANTHROPIC_API_KEY is not set")
-    import anthropic
-    return anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
+def _model_label():
+    """What produced this summary, for the record on the item."""
+    if config.ANALYSIS_PROVIDER == "claude_code":
+        return "claude-code:" + (config.CLAUDE_CLI_MODEL or "default")
+    return config.ANALYSIS_MODEL
+
+
+def configured():
+    """(ok, explanation) for whichever provider is selected."""
+    return providers.available()
 
 
 def analyse_item(item):
@@ -118,19 +127,7 @@ def analyse_item(item):
     )
 
     try:
-        client = _client()
-        resp = client.messages.create(
-            model=config.ANALYSIS_MODEL,
-            max_tokens=2000,
-            system=SYSTEM,
-            tools=[TOOL],
-            tool_choice={"type": "tool", "name": "record_analysis"},
-            messages=[{
-                "role": "user",
-                "content": f"{context}\n---\n\n{text}",
-            }],
-        )
-        payload = next(b.input for b in resp.content if b.type == "tool_use")
+        payload = providers.summarise(SYSTEM, context, text, TOOL)
     except Exception as exc:
         db.save_analysis(item_id, "failed", source_kind=source_kind,
                          source_chars=len(text),
@@ -146,14 +143,15 @@ def analyse_item(item):
         portfolio_actions=payload.get("portfolio_actions", []),
         numbers=payload.get("numbers", []),
         outlook=payload.get("outlook", ""),
-        model=config.ANALYSIS_MODEL)
+        model=_model_label())
     return "done"
 
 
 def run_pending(limit=None):
     """Summarise anything that arrived without an analysis yet."""
-    if not config.ANTHROPIC_API_KEY:
-        log.info("ANTHROPIC_API_KEY not set - skipping analysis pass")
+    ok, why = configured()
+    if not ok:
+        log.info("no summariser available (%s) - skipping analysis pass", why)
         return {"done": 0, "skipped": 0, "failed": 0}
 
     limit = limit or config.MAX_ANALYSES_PER_RUN
