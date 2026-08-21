@@ -1,0 +1,37 @@
+{# Participative notes. Rendered collapsed under every video and newsletter so
+   the shelf stays scannable; server-rendered rather than fetched, because the
+   counts are already in hand and a click should not wait on a round trip. #}
+
+{% macro insight_block(item_id, rows) -%}
+  <button class="ins-toggle" id="instoggle-{{ item_id }}"
+          onclick="toggleInsights({{ item_id }}, this)"
+          title="What the team took away from this">
+    Insights
+    <span class="count" {% if not rows %}style="display:none"{% endif %}>{{ rows|length }}</span>
+  </button>
+  <div class="insights" id="ins-{{ item_id }}" hidden>
+    <div class="ins-list" id="inslist-{{ item_id }}">
+      {%- for n in rows %}
+        <div class="insight">
+          <div class="who">{{ n.author }}
+            <span class="at">{{ n.created_at | when }}</span>
+            <button class="kill" title="Remove this insight"
+                    onclick="killInsight({{ item_id }}, {{ n.id }})">&times;</button>
+          </div>
+          <p>{{ n.body }}</p>
+        </div>
+      {%- endfor %}
+    </div>
+    <p class="ins-empty" id="insempty-{{ item_id }}"
+       {% if rows %}style="display:none"{% endif %}>
+      Nobody has written anything down yet. Be the first.</p>
+    <div class="ins-form">
+      <textarea id="insbody-{{ item_id }}"
+                placeholder="What did you take away from this?"></textarea>
+      <div class="row">
+        <input type="text" id="insauthor-{{ item_id }}" placeholder="Your name">
+        <button class="btn sm" onclick="addInsight({{ item_id }}, this)">Post</button>
+      </div>
+    </div>
+  </div>
+{%- endmacro %}

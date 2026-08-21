@@ -1,0 +1,35 @@
+# One-click deploy config for Render. Push this repo to a PRIVATE GitHub repo,
+# then "New > Blueprint" on render.com and point it at the repo.
+#
+# The plan must be a paid one. Render's free tier has no persistent disk, so the
+# database - including everyone's Insights - would be wiped on every restart.
+# Videos and newsletters would re-collect themselves; written notes would not.
+services:
+  - type: web
+    name: guardian-library
+    runtime: python
+    plan: starter                 # needs a paid plan for the persistent disk
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 180
+    healthCheckPath: /healthz
+    disk:
+      name: data
+      mountPath: /data            # DATA_DIR points here so the DB survives deploys
+      sizeGB: 1
+    envVars:
+      - key: DATA_DIR
+        value: /data
+      - key: PYTHON_VERSION
+        value: "3.12.10"
+      - key: SECRET_KEY
+        generateValue: true
+      # The shared password colleagues type to read the library. Set this, or
+      # anyone who finds the URL can read what we hold and what we have written.
+      - key: VIEWER_PASSWORD
+        sync: false               # set in the Render dashboard
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false

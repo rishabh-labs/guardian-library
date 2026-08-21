@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Analysis — Guardian Library{% endblock %}
+
+{% block content %}
+{% if not configured %}
+  <div class="flash error">
+    Summaries are switched off — no <code>ANTHROPIC_API_KEY</code> is set.
+    Add it to <code>.env</code> and restart.
+  </div>
+{% endif %}
+
+<form class="filters" method="get">
+  <select name="fund" onchange="this.form.submit()">
+    <option value="">All funds</option>
+    {% for f in funds %}
+      <option value="{{ f.id }}" {{ 'selected' if filters.fund == f.id }}>{{ f.name }}</option>
+    {% endfor %}
+  </select>
+
+  <input type="text" name="q" value="{{ filters.q }}" placeholder="Search summaries…">
+  <button class="btn" type="submit">Search</button>
+
+  <div class="spacer"></div>
+  <span class="quiet">
+    {{ stats.get('done', 0) }} summarised
+    {%- if stats.get('skipped') %} · {{ stats.skipped }} had no usable text{% endif %}
+    {%- if stats.get('failed') %} · <span class="warn">{{ stats.failed }} failed</span>{% endif %}
+  </span>
+</form>
+
+{% if analyses %}
+  <div class="alist">
+    {% for a in analyses %}
+      <article class="acard">
+        <div class="head">
+          {% if a.thumbnail %}<img src="{{ a.thumbnail }}" alt="" loading="lazy">{% endif %}
+          <div>
+            <div class="meta" style="margin-bottom:6px">
+              <span class="tag {{ a.kind }}">{{ a.kind }}</span>
+              <span class="fundname">{{ a.fund_name }}</span>
+              <span class="quiet">· {{ a.published_at | when }}</span>
+              {% if a.author %}<span class="quiet">· {{ a.author }}</span>{% endif %}
+            </div>
+            <h3><a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.title }}</a></h3>
+            <span class="quiet">
+              summarised from {{ a.source_kind }} ({{ '{:,}'.format(a.source_chars) }} chars)
+            </span>
+          </div>
+        </div>
+
+        <div class="headline">{{ a.headline }}</div>
+        <p class="summary">{{ a.summary }}</p>
+
+        <div class="cols">
+          <div>
+            <h4>Key highlights</h4>
+            <ul>{% for h in a.highlights %}<li>{{ h }}</li>{% endfor %}</ul>
+          </div>
+          <div>
+            {% if a.portfolio_actions %}
+              <h4>Portfolio actions mentioned</h4>
+              <ul>{% for p in a.portfolio_actions %}<li>{{ p }}</li>{% endfor %}</ul>
+            {% endif %}
+            {% if a.outlook %}
+              <h4>Outlook stated</h4>
+              <p style="margin:0;font-size:14px">{{ a.outlook }}</p>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if a.numbers %}
+          <h4>Figures quoted</h4>
+          <div class="numbers">{% for n in a.numbers %}<span>{{ n }}</span>{% endfor %}</div>
+        {% endif %}
+
+        <div class="foot" style="margin-top:16px">
+          <a class="btn sm" href="{{ a.url }}" target="_blank" rel="noopener">Open original</a>
+          <button class="btn ghost sm" onclick="redo({{ a.item_id }}, this)">Re-summarise</button>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+
+  <div class="pager">
+    <a class="btn ghost {{ 'disabled' if page <= 1 }}"
+       href="{{ url_for('analysis', **dict(filters, page=page-1)) }}">← Newer</a>
+    <a class="btn ghost {{ 'disabled' if not has_next }}"
+       href="{{ url_for('analysis', **dict(filters, page=page+1)) }}">Older →</a>
+  </div>
+{% else %}
+  <div class="empty">
+    <h2>No summaries yet</h2>
+    <p>Nothing is summarised automatically. Open
+       <a href="{{ url_for('newsletters') }}">Newsletters</a> and press
+       <strong>Summarise</strong> on one — it is read end to end and condensed
+       to a headline, key highlights, portfolio actions and figures quoted.</p>
+    <p class="quiet">Model: {{ model }} · you are only charged for what you summarise</p>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function redo(id, btn) {
+  btn.disabled = true; btn.textContent = 'Working…';
+  post('/item/' + id + '/analyse').then(r => location.reload());
+}
+</script>
+{% endblock %}

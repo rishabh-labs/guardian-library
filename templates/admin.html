@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Admin — Guardian Library{% endblock %}
+
+{% block content %}
+
+<div class="panel">
+  <h2>Import fund list</h2>
+  <p class="hint">
+    Upload the Excel sheet with your products. Column headers are matched loosely —
+    it looks for a fund/product name, and picks up fund house, fund manager,
+    category, YouTube channel and website columns if they are there.
+    Sources are wired up automatically for every row.
+  </p>
+  <form method="post" action="{{ url_for('import_excel') }}" enctype="multipart/form-data" class="formrow">
+    <div class="field">
+      <label>Excel file (.xlsx)</label>
+      <input type="file" name="file" accept=".xlsx" required>
+    </div>
+    <div class="field">
+      <label>Sheet name (optional)</label>
+      <input type="text" name="sheet" placeholder="first sheet">
+    </div>
+    <button class="btn" type="submit">Import</button>
+  </form>
+</div>
+
+<div class="panel">
+  <h2>Collector</h2>
+  <p class="hint">
+    Runs automatically every {{ cfg.POLL_MINUTES }} minutes.
+    {% if not has_yt_key %}
+      <br><strong>No YouTube API key set</strong> — channel uploads still work (free RSS),
+      but keyword searches for manager appearances on other channels are skipped.
+    {% endif %}
+    {% if not cfg.ANTHROPIC_API_KEY %}
+      <br><strong>No Claude API key set</strong> — the Analysis tab stays empty.
+    {% endif %}
+  </p>
+  {% if last_run %}
+    <p class="hint">
+      Last run {{ last_run.finished_at | when }} —
+      {{ last_run.new_items }} new item(s),
+      {{ last_run.sources_ok }} source(s) ok,
+      {% if last_run.sources_fail %}<span class="warn">{{ last_run.sources_fail }} failed</span>{% else %}0 failed{% endif %}.
+    </p>
+  {% endif %}
+  <form method="post" action="{{ url_for('refresh_now') }}">
+    <button class="btn" type="submit">Refresh now</button>
+  </form>
+</div>
+
+<div class="panel">
+  <h2>Add or edit a fund</h2>
+  <p class="hint">Use this for one-off additions. Bulk changes are easier via the Excel import.</p>
+  <form method="post" action="{{ url_for('save_fund') }}">
+    <div class="formrow">
+      <div class="field"><label>Product name *</label>
+        <input type="text" name="name" required placeholder="Marcellus CCP"></div>
+      <div class="field"><label>Fund house</label>
+        <input type="text" name="house" placeholder="Marcellus Investment Managers"></div>
+      <div class="field"><label>Fund manager(s), comma separated</label>
+        <input type="text" name="managers" placeholder="Saurabh Mukherjea, Rakshit Ranjan"></div>
+      <div class="field"><label>Category</label>
+        <input type="text" name="category" placeholder="PMS"></div>
+      <div class="field"><label>Extra keywords</label>
+        <input type="text" name="match_terms" placeholder="Consistent Compounders"></div>
+      <div class="field"><label>&nbsp;</label>
+        <label><input type="checkbox" name="active" checked> Active</label></div>
+      <button class="btn" type="submit">Save fund</button>
+    </div>
+  </form>
+</div>
+
+{% for f in funds %}
+  <div class="panel">
+    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+      <h2 style="margin:0">{{ f.name }}</h2>
+      {% if f.house %}<span class="quiet">{{ f.house }}</span>{% endif %}
+      {% if f.category %}<span class="tag">{{ f.category }}</span>{% endif %}
+      {% if not f.active %}<span class="tag" style="color:var(--warn)">paused</span>{% endif %}
+      <div class="spacer" style="flex:1"></div>
+      <form method="post" action="{{ url_for('remove_fund', fund_id=f.id) }}"
+            onsubmit="return confirm('Remove {{ f.name }} and all its sources and items?')">
+        <button class="btn danger sm" type="submit">Remove fund</button>
+      </form>
+    </div>
+    {% if f.managers %}<p class="hint" style="margin:6px 0 12px">Managers: {{ f.managers }}</p>{% endif %}
+
+    <table>
+      <thead>
+        <tr><th>Type</th><th>Value</th><th>Last checked</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for s in sources.get(f.id, []) %}
+          <tr {{ 'style=opacity:.5' if not s.enabled }}>
+            <td>{{ s.kind }}</td>
+            <td class="mono">{{ s.value }}</td>
+            <td class="quiet">{{ s.last_checked | when }}</td>
+            <td class="quiet">
+              {% if 'FAIL' in s.last_status or 'Error' in s.last_status %}
+                <span class="warn">{{ s.last_status }}</span>
+              {% else %}{{ s.last_status }}{% endif %}
+            </td>
+            <td style="white-space:nowrap">
+              <form method="post" action="{{ url_for('source_action', source_id=s.id, action='toggle') }}" style="display:inline">
+                <button class="btn ghost sm" type="submit">{{ 'Pause' if s.enabled else 'Enable' }}</button>
+              </form>
+              <form method="post" action="{{ url_for('source_action', source_id=s.id, action='delete') }}" style="display:inline">
+                <button class="btn danger sm" type="submit">Delete</button>
+              </form>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="quiet">No sources yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <form method="post" action="{{ url_for('save_source') }}" class="formrow" style="margin-top:12px">
+      <input type="hidden" name="fund_id" value="{{ f.id }}">
+      <div class="field"><label>Add source</label>
+        <select name="kind">
+          {% for k in source_kinds %}<option value="{{ k }}">{{ k }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field"><label>Channel URL / query / feed URL / page URL</label>
+        <input type="text" name="value" required style="min-width:340px"></div>
+      <div class="field"><label>Label</label><input type="text" name="label"></div>
+      <button class="btn sm" type="submit">Add</button>
+    </form>
+  </div>
+{% else %}
+  <div class="empty">
+    <h2>No funds yet</h2>
+    <p>Upload your Excel list above to get started.</p>
+  </div>
+{% endfor %}
+{% endblock %}

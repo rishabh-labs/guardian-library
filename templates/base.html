@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Guardian Library{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="{{ url_for('index') }}"><span class="mark">G</span>Guardian&nbsp;Library</a>
+    <nav>
+      {% for key, label, _desc in cfg.BUCKETS %}
+        <a href="{{ url_for('shelf', bucket=key) }}"
+           class="{{ 'on' if request.endpoint in ('shelf', 'index') and bucket == key }}">{{ label }}</a>
+      {% endfor %}
+      <a href="{{ url_for('newsletters') }}"
+         class="{{ 'on' if request.endpoint == 'newsletters' }}">Newsletters</a>
+      <a href="{{ url_for('analysis') }}"
+         class="{{ 'on' if request.endpoint == 'analysis' }}">Analysis</a>
+      <a href="{{ url_for('admin') }}"
+         class="{{ 'on' if request.endpoint == 'admin' }}">Admin</a>
+    </nav>
+    <div class="spacer"></div>
+    {% if last_run %}
+      <span class="runstamp" title="{{ last_run.finished_at }}">
+        last checked {{ last_run.finished_at | when }}
+        {%- if last_run.sources_fail %} · <span class="warn">{{ last_run.sources_fail }} source(s) failing</span>{% endif %}
+      </span>
+    {% endif %}
+    {% if session.get('admin') %}<a class="quiet" href="{{ url_for('logout') }}">Sign out</a>{% endif %}
+  </div>
+</header>
+
+<main class="wrap">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="flash {{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+
+<script>
+function post(url, body) {
+  return fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body || {})
+  }).then(r => r.json());
+}
+
+/* ---- Insights: a shared notebook under every video and newsletter -------- */
+
+function toggleInsights(id, btn) {
+  const box = document.getElementById('ins-' + id);
+  if (!box) return;
+  box.hidden = !box.hidden;
+  if (!box.hidden) {
+    const who = document.getElementById('insauthor-' + id);
+    // Everyone signs their own notes; remember the name so it is typed once.
+    if (who && !who.value) who.value = localStorage.getItem('gl_author') || '';
+    const body = document.getElementById('insbody-' + id);
+    if (body) body.focus();
+  }
+}
+
+function whenText(iso) {
+  const t = Date.parse(iso.endsWith('Z') || iso.includes('+') ? iso : iso + 'Z');
+  if (isNaN(t)) return '';
+  const mins = Math.round((Date.now() - t) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + 'm ago';
+  if (mins < 1440) return Math.round(mins / 60) + 'h ago';
+  return new Date(t).toLocaleDateString(undefined, {day: 'numeric', month: 'short'});
+}
+
+function renderInsights(id, rows) {
+  const list = document.getElementById('inslist-' + id);
+  if (!list) return;
+  list.textContent = '';
+  rows.forEach(n => {
+    const div = document.createElement('div');
+    div.className = 'insight';
+    const who = document.createElement('div');
+    who.className = 'who';
+    who.append(document.createTextNode(n.author));
+    const at = document.createElement('span');
+    at.className = 'at';
+    at.textContent = whenText(n.created_at || '');
+    who.append(at);
+    const kill = document.createElement('button');
+    kill.className = 'kill';
+    kill.title = 'Remove this insight';
+    kill.innerHTML = '&times;';
+    kill.onclick = () => killInsight(id, n.id);
+    who.append(kill);
+    const p = document.createElement('p');
+    p.textContent = n.body;              // textContent, never innerHTML
+    div.append(who, p);
+    list.append(div);
+  });
+  const empty = document.getElementById('insempty-' + id);
+  if (empty) empty.style.display = rows.length ? 'none' : '';
+  const badge = document.querySelector('#instoggle-' + id + ' .count');
+  if (badge) {
+    badge.textContent = rows.length;
+    badge.style.display = rows.length ? '' : 'none';
+  }
+}
+
+function addInsight(id, btn) {
+  const body = document.getElementById('insbody-' + id);
+  const who = document.getElementById('insauthor-' + id);
+  const text = (body.value || '').trim();
+  if (!text) { body.focus(); return; }
+  const author = (who.value || '').trim() || 'Anonymous';
+  localStorage.setItem('gl_author', author);
+  btn.disabled = true;
+  post('/item/' + id + '/insight', {author: author, body: text})
+    .then(r => {
+      btn.disabled = false;
+      if (r.error) { alert(r.error); return; }
+      body.value = '';
+      renderInsights(id, r.insights || []);
+    })
+    .catch(() => { btn.disabled = false; });
+}
+
+function killInsight(itemId, insightId) {
+  if (!confirm('Remove this insight?')) return;
+  post('/insight/' + insightId + '/delete')
+    .then(() => fetch('/item/' + itemId + '/insights').then(r => r.json()))
+    .then(r => renderInsights(itemId, r.insights || []));
+}
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

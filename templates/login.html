@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Sign in — Guardian Library{% endblock %}
+
+{% block content %}
+<div class="panel" style="max-width:400px;margin:60px auto">
+  <h2>Sign in</h2>
+  <p class="hint">Enter the team password to read the library. The admin
+     password also unlocks Admin, where funds and sources are changed.</p>
+  <form method="post">
+    <div class="formrow">
+      <div class="field" style="flex:1">
+        <label>Password</label>
+        <input type="password" name="password" autofocus required style="width:100%">
+      </div>
+    </div>
+    <button class="btn" type="submit">Sign in</button>
+  </form>
+</div>
+{% endblock %}

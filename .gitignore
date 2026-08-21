@@ -1,0 +1,14 @@
+.env
+data/
+*.db
+*.db-wal
+*.db-shm
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.xlsx
+!funds_template.xlsx
+# The fund list ships with the deploy so a fresh server can seed itself.
+# Keep the repository PRIVATE: this names the products actually held.
+!Lists.xlsx

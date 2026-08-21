@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% from "_insights.html" import insight_block %}
+{% block title %}Newsletters — Guardian Library{% endblock %}
+
+{% macro month_name(p) -%}
+  {%- if not p or p == 'undated' -%}Undated
+  {%- else -%}
+    {{ ['','January','February','March','April','May','June','July',
+        'August','September','October','November','December'][p[5:7]|int] }}
+    {{ p[:4] }}
+  {%- endif -%}
+{%- endmacro %}
+
+{% block content %}
+<form class="filters" method="get">
+  <select name="house" onchange="this.form.submit()">
+    <option value="">All fund houses</option>
+    {% for h in all_houses %}
+      <option value="{{ h }}" {{ 'selected' if filters.house == h }}>{{ h }}</option>
+    {% endfor %}
+  </select>
+
+  <select name="period" onchange="this.form.submit()">
+    <option value="">All months</option>
+    {% for p in all_periods %}
+      <option value="{{ p }}" {{ 'selected' if filters.period == p }}>{{ month_name(p) }}</option>
+    {% endfor %}
+  </select>
+
+  <input type="text" name="q" value="{{ filters.q }}" placeholder="Search newsletters…">
+  <button class="btn" type="submit">Search</button>
+  {% if filters.house or filters.period or filters.q %}
+    <a class="chip" href="{{ url_for('newsletters') }}">Clear</a>
+  {% endif %}
+
+  <div class="spacer"></div>
+  <span class="quiet">{{ total }} newsletter(s) · {{ houses|length }} house(s)</span>
+</form>
+
+{% if not configured %}
+  <div class="flash">
+    Summaries are off — no <code>ANTHROPIC_API_KEY</code> set. The library works
+    without it; the <strong>Summarise</strong> buttons stay disabled.
+  </div>
+{% endif %}
+
+{% if houses %}
+  {% for h in houses %}
+    <div class="panel">
+      <h2 style="margin-bottom:12px">{{ h }}
+        <span class="quiet" style="font-weight:400">— {{ grouped[h]|length }} newsletter(s)</span>
+      </h2>
+      <table>
+        <thead>
+          <tr><th style="width:110px">Month</th><th>Newsletter</th><th style="width:210px"></th></tr>
+        </thead>
+        <tbody>
+          {% for n in grouped[h] %}
+            <tr id="nl-{{ n.id }}">
+              <td class="quiet" style="white-space:nowrap">{{ month_name(n.period) }}</td>
+              <td>
+                <a href="{{ n.url }}" target="_blank" rel="noopener">{{ n.title }}</a>
+                {% if n.kind == 'document' %}<span class="tag document">PDF</span>{% endif %}
+                {% set s = summaries.get(n.id) %}
+                {% if s %}
+                  <div class="nlsum">
+                    <div class="headline">{{ s.headline }}</div>
+                    <p>{{ s.summary }}</p>
+                    {% if s.highlights %}
+                      <ul>{% for hl in s.highlights[:4] %}<li>{{ hl }}</li>{% endfor %}</ul>
+                    {% endif %}
+                    {% if s.portfolio_actions %}
+                      <div class="quiet" style="margin-top:6px">
+                        <strong>Portfolio actions:</strong>
+                        {{ s.portfolio_actions | join('; ') }}
+                      </div>
+                    {% endif %}
+                  </div>
+                {% endif %}
+                {{ insight_block(n.id, insights.get(n.id, [])) }}
+              </td>
+              <td style="white-space:nowrap">
+                {% if n.id in analysed %}
+                  <a class="btn ghost sm" href="{{ url_for('analysis', q=n.title[:40]) }}">Full analysis</a>
+                {% else %}
+                  <button class="btn sm" {{ 'disabled' if not configured }}
+                          onclick="summarise({{ n.id }}, this)">Summarise</button>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endfor %}
+{% else %}
+  <div class="empty">
+    <h2>No newsletters yet</h2>
+    <p>Newsletter sources are configured per fund house in
+       <code>newsletter_sources.py</code>. Run a refresh from
+       <a href="{{ url_for('admin') }}">Admin</a>, or add a source there.</p>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function summarise(id, btn) {
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Reading…';
+  post('/item/' + id + '/analyse')
+    .then(r => {
+      if (r.error) { btn.textContent = 'Failed'; btn.title = r.error; return; }
+      if (r.status === 'done') { location.reload(); }
+      else {
+        btn.textContent = r.status === 'skipped' ? 'No readable text' : 'Failed';
+        btn.title = (r.analysis && r.analysis.error) || r.status;
+      }
+    })
+    .catch(() => { btn.disabled = false; btn.textContent = original; });
+}
+</script>
+{% endblock %}

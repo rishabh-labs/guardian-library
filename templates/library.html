@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% from "_insights.html" import insight_block %}
+{% block title %}Library — Guardian Library{% endblock %}
+
+{% block content %}
+
+{# Newsletter summaries at the top of the front page: the month's reading in
+   one glance, without leaving the video shelf. #}
+{% if bucket == 'active' %}
+<div class="panel nlpanel">
+  <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+    <h2 style="margin:0">Newsletter summaries</h2>
+    <span class="quiet">
+      {%- if nl_counts.latest_period -%}
+        {{ nl_counts.this_month }} newsletter(s) this month
+        {%- if nl_counts.pending_this_month %} · {{ nl_counts.pending_this_month }} not summarised{% endif %}
+        · {{ nl_counts.total }} in the archive
+      {%- else -%}
+        nothing collected yet
+      {%- endif -%}
+    </span>
+    <div style="flex:1"></div>
+    {% if nl_counts.latest_period %}
+      <a class="btn sm" href="{{ url_for('newsletters', period=nl_counts.latest_period) }}">
+        This month</a>
+    {% endif %}
+    <a class="btn ghost sm" href="{{ url_for('newsletters') }}">Archive</a>
+  </div>
+
+  {% if nl_summaries %}
+    {% for s in nl_summaries %}
+      <div class="row">
+        <span class="per">{{ s.period }}</span>
+        <span class="who">{{ s.fund_name }}</span>
+        <span class="what">
+          <strong>{{ s.headline }}</strong><br>
+          <span class="quiet">{{ s.summary[:190] }}{% if s.summary|length > 190 %}…{% endif %}</span>
+        </span>
+        <a class="btn ghost sm" href="{{ s.url }}" target="_blank" rel="noopener">Open</a>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p class="hint" style="margin:10px 0 0">
+      {% if nl_counts.this_month %}
+        {{ nl_counts.this_month }} newsletter(s) came in this month. Open
+        <a href="{{ url_for('newsletters', period=nl_counts.latest_period) }}">this month</a>
+        and press <strong>Summarise</strong> on the ones worth reading — summaries
+        appear here. The other {{ nl_counts.total - nl_counts.this_month }} in the
+        archive stay unsummarised unless you ask.
+      {% elif nl_counts.total %}
+        {{ nl_counts.total }} newsletter(s) in the archive. Summarise any of them
+        on demand from <a href="{{ url_for('newsletters') }}">Newsletters</a>.
+      {% else %}
+        No newsletters collected yet.
+      {% endif %}
+    </p>
+  {% endif %}
+</div>
+{% endif %}
+
+<h1 class="shelfhead">
+  {% for key, label, desc in buckets %}{% if key == bucket %}
+    {{ label }} <span class="quiet">— {{ desc }}</span>
+  {% endif %}{% endfor %}
+</h1>
+
+<form class="filters" method="get">
+  <select name="fund" onchange="this.form.submit()">
+    <option value="">All funds</option>
+    {% for f in funds %}
+      <option value="{{ f.id }}" {{ 'selected' if filters.fund == f.id }}>
+        {{ f.name }}{% if unseen_counts.get(f.id) %} ({{ unseen_counts[f.id] }} new){% endif %}
+      </option>
+    {% endfor %}
+  </select>
+
+  <input type="text" name="q" value="{{ filters.q }}" placeholder="Search title or text…">
+  <button class="btn" type="submit">Search</button>
+
+  <div class="chips">
+    <a class="chip {{ 'on' if filters.unseen }}"
+       href="{{ url_for('shelf', bucket=bucket, fund=filters.fund, q=filters.q, unseen='' if filters.unseen else '1') }}">Unseen only</a>
+    <a class="chip {{ 'on' if filters.starred }}"
+       href="{{ url_for('shelf', bucket=bucket, fund=filters.fund, q=filters.q, starred='' if filters.starred else '1') }}">Starred</a>
+    {% if filters.fund or filters.q or filters.unseen or filters.starred %}
+      <a class="chip" href="{{ url_for('shelf', bucket=bucket) }}">Clear</a>
+    {% endif %}
+  </div>
+</form>
+
+<p class="quiet" style="margin:-6px 0 16px">
+  {%- if not show_all %}
+    Showing English videos over {{ min_minutes }} minutes.
+    {% if shelf_hidden.short %}{{ shelf_hidden.short }} shorter{% endif %}
+    {%- if shelf_hidden.short and shelf_hidden.other_language %},{% endif %}
+    {% if shelf_hidden.other_language %}{{ shelf_hidden.other_language }} in other languages{% endif %}
+    {%- if shelf_hidden.short or shelf_hidden.other_language %} hidden.{% endif %}
+    {% if shelf_hidden.third_party %}
+      {{ shelf_hidden.third_party }} video(s) about these funds by other people
+      hidden — only the managers' own appearances are shown.
+    {% endif %}
+    <a href="{{ url_for('shelf', bucket=bucket, **dict(filters, all='1')) }}">Show everything</a>
+  {%- else %}
+    Showing all lengths and languages.
+    <a href="{{ url_for('shelf', bucket=bucket, **dict(filters, all='')) }}">Back to English, {{ min_minutes }} min+</a>
+  {%- endif %}
+  {% if promo_hidden and not show_promo %}
+    · {{ promo_hidden }} promotional item(s) hidden —
+    <a href="{{ url_for('shelf', bucket=bucket, **dict(filters, promo='1')) }}">show</a>
+  {% elif show_promo %}
+    · promotional items shown —
+    <a href="{{ url_for('shelf', bucket=bucket, **dict(filters, promo='')) }}">hide</a>
+  {% endif %}
+</p>
+
+{% if items %}
+  <div class="grid">
+    {% for it in items %}
+      <article class="card {{ 'unseen' if not it.seen }}" id="item-{{ it.id }}">
+        {% if it.thumbnail %}
+          <a class="thumb" href="{{ it.url }}" target="_blank" rel="noopener"
+             onclick="markSeen({{ it.id }})">
+            <img src="{{ it.thumbnail }}" alt="" loading="lazy">
+          </a>
+        {% endif %}
+        <div class="body">
+          <div class="meta">
+            <span class="tag {{ it.kind }}">{{ kind_labels.get(it.kind, it.kind) }}</span>
+            <span class="fundname">{{ it.fund_name }}</span>
+            {% if it.also_count %}
+              {# One video, several strategies of the same house - shown once. #}
+              <span class="tag also" title="Also tracked under: {{ it.also_funds }}">+{{ it.also_count }}</span>
+            {% endif %}
+            {% if it.content_type == 'promo' %}
+              <span class="tag promo" title="{{ it.classify_why }}">promo</span>
+            {% endif %}
+            {% if it.duration_secs %}
+              <span class="quiet">{{ it.duration_secs // 60 }}m</span>
+            {% endif %}
+            {% if it.language and it.language != 'en' %}
+              <span class="tag" title="{{ it.language_why }}">{{ it.language }}</span>
+            {% endif %}
+          </div>
+          <h3>
+            <a href="{{ it.url }}" target="_blank" rel="noopener"
+               onclick="markSeen({{ it.id }})">{{ it.title }}</a>
+          </h3>
+          {% if it.summary %}<div class="sum">{{ it.summary[:180] }}{% if it.summary|length > 180 %}…{% endif %}</div>{% endif %}
+          <div class="meta">
+            {% if it.author %}<span>{{ it.author }}</span>{% endif %}
+            <span>{{ it.published_at | when }}</span>
+          </div>
+          <div class="foot">
+            <button class="star {{ 'on' if it.starred }}"
+                    onclick="toggleStar(this, {{ it.id }})"
+                    title="Star for the next review">★</button>
+            {% if not it.seen %}
+              <button class="btn ghost sm" onclick="markSeen({{ it.id }}, this)">Mark read</button>
+            {% endif %}
+            {% if it.kind == 'video' %}
+              <button class="btn ghost sm" onclick="reclassify({{ it.id }}, this)"
+                      title="{{ it.classify_why or 'no reason recorded' }}">
+                {{ 'Not promo' if it.content_type == 'promo' else 'Mark promo' }}
+              </button>
+            {% endif %}
+            <div style="flex:1"></div>
+            {{ insight_block(it.id, insights.get(it.id, [])) }}
+          </div>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+
+  <div class="pager">
+    <a class="btn ghost {{ 'disabled' if page <= 1 }}"
+       href="{{ url_for('shelf', bucket=bucket, **dict(filters, page=page-1)) }}">← Newer</a>
+    <a class="btn ghost {{ 'disabled' if not has_next }}"
+       href="{{ url_for('shelf', bucket=bucket, **dict(filters, page=page+1)) }}">Older →</a>
+  </div>
+{% else %}
+  <div class="empty">
+    <h2>Nothing here yet</h2>
+    {% if not funds %}
+      <p>Import your fund list from <a href="{{ url_for('admin') }}">Admin</a> to get started.</p>
+    {% else %}
+      <p>No items match this filter. The collector runs every {{ cfg.POLL_MINUTES }} minutes —
+         or trigger it now from <a href="{{ url_for('admin') }}">Admin</a>.</p>
+    {% endif %}
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function markSeen(id, btn) {
+  post('/item/' + id + '/seen', {value: 1});
+  const card = document.getElementById('item-' + id);
+  if (card) card.classList.remove('unseen');
+  if (btn) btn.remove();
+}
+function toggleStar(btn, id) {
+  const on = !btn.classList.contains('on');
+  btn.classList.toggle('on', on);
+  post('/item/' + id + '/starred', {value: on ? 1 : 0});
+}
+function reclassify(id, btn) {
+  const toPromo = btn.textContent.trim() === 'Mark promo';
+  btn.disabled = true;
+  post('/item/' + id + '/reclassify',
+       {content_type: toPromo ? 'promo' : 'research'})
+    .then(() => location.reload());
+}
+</script>
+{% endblock %}
