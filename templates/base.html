@@ -28,7 +28,12 @@
         <img src="{{ url_for('static', filename=cfg.logo_file()) }}"
              alt="Guardian Capital">
       {% else %}
-        <span class="mh-fallback">G</span>
+        {# Stand-in until static/logo.png is saved. Deliberately the house
+           wordmark rather than an invented mark. #}
+        <span class="mh-fallback">
+          <span class="mh-fb-name">Guardian</span>
+          <span class="mh-fb-sub">Capital</span>
+        </span>
       {% endif %}
     </span>
     <span class="mh-words">

@@ -66,6 +66,42 @@ SYNTHETIC = [
 ]
 
 
+# Greetings at a length that would otherwise read as research. The old rules
+# only caught these by their runtime, so a long festival film sailed through.
+COURTESY = [
+    ("Happy Parents' Day!", "promo"),
+    ("Happy Father's Day!", "promo"),
+    ("Happy Onam", "promo"),
+    ("Wishing everyone a prosperous Onam", "promo"),
+    ("Pookalam ki khoobsurti uske size mein nahi. Wishing you a joyous Onam",
+     "promo"),
+    ("Happy Independence Day!", "promo"),
+    ("Season's Greetings from Abakkus", "promo"),
+    ("Ganesh Chaturthi celebrations at Abakkus", "promo"),
+    ("Happy New Year 2027", "promo"),
+    ("Team outing 2026", "promo"),
+    # A festival named inside genuine commentary must survive.
+    ("Muhurat Trading: Diwali Market Outlook 2026", "research"),
+    ("Market Outlook and Fund Update, 11 August", "research"),
+    ("Abakkus Insights - Portfolio Update, June 26", "research"),
+    ("Annual letter to investors 2026", "research"),
+]
+
+
+def run_long(cases, label):
+    """Same check, but at 30 minutes - length must not rescue a greeting."""
+    failures = []
+    for title, expected in cases:
+        got, why = classify_video(title, managers=MANAGERS, duration=1800,
+                                  allow_model=False)
+        mark = "ok  " if got == expected else "FAIL"
+        if got != expected:
+            failures.append((title, expected, got, why))
+        print(f"  {mark} [{got:8}] {title[:64]}")
+    print(f"\n{label}: {len(cases) - len(failures)}/{len(cases)} correct")
+    return failures
+
+
 def run(cases, label):
     failures = []
     for title, expected in cases:
@@ -83,6 +119,8 @@ if __name__ == "__main__":
     bad = run(REAL, "real")
     print("\n=== synthetic patterns from other houses ===")
     bad += run(SYNTHETIC, "synthetic")
+    print("\n=== greetings, at 30 minutes ===")
+    bad += run_long(COURTESY, "courtesy")
 
     if bad:
         print(f"\n{len(bad)} FAILURE(S):")

@@ -98,10 +98,20 @@ a:hover { text-decoration: underline; }
 }
 .mh-logo img { width: 100%; height: 100%; object-fit: contain; padding: 8px; }
 .mh-fallback {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  line-height: 1; text-align: center;
+}
+.mh-fb-name {
   font-family: "Playfair Display", Georgia, serif;
-  font-size: 40px; font-weight: 800;
-  background: linear-gradient(145deg, var(--gold), var(--gold-dim));
-  -webkit-background-clip: text; background-clip: text; color: transparent;
+  font-size: 15px; font-weight: 600; color: var(--gold);
+}
+.mh-fb-sub {
+  font-size: 7px; letter-spacing: .22em; text-transform: uppercase;
+  color: var(--gold-dim); font-weight: 600;
+}
+@media (max-width: 620px) {
+  .mh-fb-name { font-size: 11px; }
+  .mh-fb-sub { font-size: 5.5px; letter-spacing: .16em; }
 }
 
 .mh-words { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }

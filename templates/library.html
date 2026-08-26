@@ -109,14 +109,14 @@
     Showing all lengths and languages.
     <a href="{{ url_for('shelf', bucket=bucket, **dict(filters, all='')) }}">Back to English, {{ min_minutes }} min+</a>
   {%- endif %}
-  {% if cfg.STATIC_EXPORT %}
-  {% elif promo_hidden and not show_promo %}
-    · {{ promo_hidden }} promotional item(s) hidden —
-    <a href="{{ url_for('shelf', bucket=bucket, **dict(filters, promo='1')) }}">show</a>
-  {% elif show_promo %}
-    · promotional items shown —
-    <a href="{{ url_for('shelf', bucket=bucket, **dict(filters, promo='')) }}">hide</a>
-  {% endif %}
+  {%- if promo_hidden and not show_promo %}
+    {# Stated, not offered. Marketing and greetings are never one click away
+       from the shelf: this is a library of manager commentary. #}
+    · {{ promo_hidden }} promotional item(s) permanently hidden
+  {%- elif show_promo %}
+    · <span class="warn">promotional items are being shown</span> —
+    <a href="{{ url_for('shelf', bucket=bucket, **dict(filters, promo='')) }}">hide them</a>
+  {%- endif %}
 </p>
 
 {% if items %}

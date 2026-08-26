@@ -98,9 +98,45 @@ RESEARCH_RULES = [
     (+2, r"\bfund manager\b|\bCIO\b|\bCEO\b|chief investment"),
 ]
 
+# Greetings and courtesy posts. A hard rule, not a score: these were only ever
+# caught by being short, so a fund house posting a two-minute Onam film - or a
+# long one - slipped through as research. Nothing titled "Happy Onam" is ever
+# fund manager commentary, at any length.
+COURTESY = re.compile(
+    r"happy\s+[\w']+(?:\s+\w+)?\s*(?:day|year|anniversary)"
+    r"|\bwish(?:ing|es)\b[^.]{0,40}\b(?:you|all|our|everyone|team|family)\b"
+    r"|season\'?s greetings|warm (?:wishes|greetings)|heartfelt (?:wishes|greetings)"
+    r"|\bfestive (?:season|greetings|wishes)\b"
+    # Indian festivals by name, however the sentence is built around them.
+    r"|\b(?:onam|pookalam|diwali|deepavali|dhanteras|holi|pongal|vishu"
+    r"|baisakhi|vaisakhi|raksha ?bandhan|rakhi|janmashtami|ganesh chaturthi"
+    r"|navratri|dussehra|dasara|durga puja|lohri|makar sankranti|ugadi"
+    r"|gudi padwa|bihu|eid|muharram|christmas|guru nanak|bhai dooj)\b"
+    # Office and personal occasions.
+    r"|\b(?:birthday|anniversary|team outing|annual day|womens? day"
+    r"|mothers? day|fathers? day|parents? day|teachers? day|childrens? day"
+    r"|independence day|republic day|labour day)\b",
+    re.I)
+
+# ...but a festival can legitimately appear in real commentary - Muhurat
+# trading happens on Diwali, and a manager may date an outlook by the season.
+COURTESY_EXEMPT = re.compile(
+    r"muhurat|\boutlook\b|market (?:review|update|commentary)"
+    r"|\bstrategy\b|portfolio|\bnav\b|factsheet"
+    r"|\bwebinar\b|\binterview\b|\bpodcast\b",
+    re.I)
+
+
 # Titles that are only a question or a slogan, with nothing concrete in them.
 VAGUE_TITLE = re.compile(
     r"^\s*(what|why|how|did|is|are|do|does|can|should)\b[^?]{0,45}\?\s*$", re.I)
+
+
+def is_courtesy(title):
+    """A greeting or occasion post, judged on the title alone."""
+    if not COURTESY.search(title or ""):
+        return False
+    return not COURTESY_EXEMPT.search(title or "")
 
 
 def _rule_score(title, description, managers):
@@ -289,6 +325,11 @@ def resolve_ambiguous(rows, limit=None):
 def classify_video(title, description="", author="", managers=(),
                    duration=None, allow_model=True):
     """Returns (content_type, why)."""
+    # Checked before anything else: no amount of runtime or a manager's name in
+    # the title turns a festival greeting into research.
+    if is_courtesy(title):
+        return "promo", "greeting or occasion post"
+
     score, reasons = _rule_score(title, description, managers)
     d_score, d_reasons = _duration_score(duration)
     score += d_score
