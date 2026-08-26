@@ -90,13 +90,17 @@ a:hover { text-decoration: underline; }
 .mh-inner:hover { text-decoration: none; }
 
 .mh-logo {
-  width: 78px; height: 78px; flex-shrink: 0;
-  border-radius: 14px; overflow: hidden;
-  background: #0a0a0a;
+  width: 86px; height: 86px; flex-shrink: 0;
+  border-radius: 16px; overflow: hidden;
+  /* Near-black behind the gold, the way the tile reads on the Brief. */
+  background: radial-gradient(circle at 50% 40%, #14100a 0%, #0a0a0a 70%);
   display: grid; place-items: center;
-  box-shadow: 0 0 0 1px rgba(216,171,95,.28), 0 6px 22px -10px rgba(0,0,0,.85);
+  box-shadow: 0 0 0 1px rgba(216,171,95,.30), 0 8px 26px -12px rgba(0,0,0,.9);
 }
-.mh-logo img { width: 100%; height: 100%; object-fit: contain; padding: 8px; }
+.mh-logo img {
+  width: 100%; height: 100%; object-fit: contain;
+  padding: 7px; display: block;
+}
 .mh-fallback {
   display: flex; flex-direction: column; align-items: center; gap: 1px;
   line-height: 1; text-align: center;
@@ -136,7 +140,7 @@ a:hover { text-decoration: underline; }
 @media (max-width: 620px) {
   .masthead { padding: 22px 16px 16px; }
   .mh-inner { gap: 14px; }
-  .mh-logo { width: 56px; height: 56px; border-radius: 11px; }
+  .mh-logo { width: 60px; height: 60px; border-radius: 12px; }
   .mh-name { font-size: 29px; white-space: normal; text-align: left; }
   .mh-the { font-size: 10px; letter-spacing: .34em; }
   .mh-tagline { font-size: 13.5px; margin-top: 10px; }
