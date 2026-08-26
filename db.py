@@ -298,6 +298,45 @@ def redact(text):
     return text
 
 
+def scrub_secrets():
+    """Redact every stored text field, then rewrite the file.
+
+    The writers already redact, but this is the guarantee: the database is
+    committed to the repository, so a single unredacted write - from an older
+    process still running, or a code path added later that forgets - would
+    publish a credential. Run this immediately before the database is
+    committed and it cannot happen.
+
+    VACUUM matters as much as the UPDATEs: SQLite leaves the old text in freed
+    pages, so a scrub without it leaves the key sitting in the file.
+    """
+    # (table, text column, primary key) - analyses keys on item_id, not id.
+    columns = [("sources", "last_status", "id"), ("runs", "detail", "id"),
+               ("analyses", "error", "item_id"),
+               ("items", "classify_why", "id")]
+    conn = connect()
+    changed = 0
+    with conn:
+        for table, column, pk in columns:
+            rows = conn.execute(
+                f"SELECT {pk} AS k, {column} AS v FROM {table}").fetchall()
+            for r in rows:
+                clean = redact(r["v"])
+                if clean != r["v"]:
+                    conn.execute(
+                        f"UPDATE {table} SET {column} = ? WHERE {pk} = ?",
+                        (clean, r["k"]))
+                    changed += 1
+    conn.close()
+
+    conn = connect()
+    conn.isolation_level = None
+    conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+    conn.execute("VACUUM")
+    conn.close()
+    return changed
+
+
 def mark_source_status(source_id, status):
     """Record a status WITHOUT marking the source as polled.
 

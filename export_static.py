@@ -44,6 +44,13 @@ def pages():
 
 def build(outdir):
     db.init()
+
+    # The database is committed to the repository straight after this runs, so
+    # this is the last point at which a stored credential can be caught.
+    scrubbed = db.scrub_secrets()
+    if scrubbed:
+        print(f"  redacted credentials from {scrubbed} stored field(s)")
+
     client = flask_app.app.test_client()
 
     if os.path.isdir(outdir):
