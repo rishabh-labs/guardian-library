@@ -4,6 +4,10 @@ name: Collect and publish
 # at the office. Free: a run takes two or three minutes, and a private repo gets
 # 2,000 minutes a month.
 on:
+  # Build on every push to main, so the site is never behind the code. The
+  # job's own commit carries [skip ci], so this does not loop.
+  push:
+    branches: [main]
   schedule:
     # 02:00 UTC = 07:30 IST, so the day starts with the overnight publications
     # already collected.
