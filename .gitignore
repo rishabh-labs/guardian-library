@@ -14,8 +14,7 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+# No spreadsheets in the repository. The committed database already carries
+# every fund and source, so the seed sheet was never actually read - and this
+# repository is public, so the raw list of holdings has no business in it.
 *.xlsx
-!funds_template.xlsx
-# The fund list ships with the deploy so a fresh server can seed itself.
-# Keep the repository PRIVATE: this names the products actually held.
-!Lists.xlsx

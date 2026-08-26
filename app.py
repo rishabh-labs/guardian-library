@@ -37,9 +37,9 @@ KIND_LABELS = {"video": "Video", "podcast": "Podcast",
 def bootstrap_if_empty():
     """Seed a brand-new deployment from the fund list shipped with the code.
 
-    The database lives on a disk that starts empty, so without this the first
-    deploy comes up as an empty portal and someone has to import the sheet by
-    hand before anything collects.
+    Only fires on a genuinely empty database. The published copy ships with the
+    collected library already in it, so this is a local convenience - the sheet
+    is deliberately not in the repository, which is public.
     """
     if db.list_funds():
         return
