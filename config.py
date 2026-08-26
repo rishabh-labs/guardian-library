@@ -106,6 +106,38 @@ ANALYSIS_PROVIDER = os.environ.get("ANALYSIS_PROVIDER", "api")
 # as buttons that silently do nothing.
 STATIC_EXPORT = os.environ.get("STATIC_EXPORT", "0") == "1"
 
+# --- Masthead -----------------------------------------------------------
+SITE_NAME = os.environ.get("SITE_NAME", "Guardian Library")
+SITE_TAGLINE = os.environ.get(
+    "SITE_TAGLINE", "Only the research that moves your money.")
+
+# Save the Guardian Capital logo into static/ as logo.png (or .jpg/.svg/.webp)
+# and it appears in the masthead and as the tab icon. Without it the lettered
+# tile is used instead, so a missing file never breaks the page.
+LOGO_FILE = os.environ.get("LOGO_FILE", "")
+
+_LOGO_NAMES = ["logo.png", "logo.svg", "logo.jpg", "logo.jpeg", "logo.webp",
+               "guardian.png", "guardian-capital.png"]
+
+
+def logo_file():
+    """The logo's filename under static/, or "" when none has been saved.
+
+    Several spellings are accepted because the file arrives by drag-and-drop
+    and nobody should have to rename it to match a setting.
+    """
+    if LOGO_FILE:
+        return LOGO_FILE if os.path.exists(
+            os.path.join(BASE_DIR, "static", LOGO_FILE)) else ""
+    for name in _LOGO_NAMES:
+        if os.path.exists(os.path.join(BASE_DIR, "static", name)):
+            return name
+    return ""
+
+
+def has_logo():
+    return bool(logo_file())
+
 # Full path to claude.exe. Left blank, the portal looks on PATH and then in the
 # desktop app's versioned install directory.
 CLAUDE_CLI_PATH = os.environ.get("CLAUDE_CLI_PATH", "")

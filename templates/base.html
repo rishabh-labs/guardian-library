@@ -9,12 +9,38 @@
        house should find by searching its own name. #}
     <meta name="robots" content="noindex, nofollow, noarchive">
   {% endif %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,800;1,500&display=swap">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% if cfg.has_logo() %}
+    <link rel="icon" href="{{ url_for('static', filename=cfg.logo_file()) }}">
+  {% endif %}
 </head>
 <body>
+{# The masthead follows the house format: logo tile, THE, the wordmark in a
+   high-contrast serif, tagline underneath. #}
+<div class="masthead">
+  <a class="mh-inner" href="{{ url_for('index') }}">
+    <span class="mh-logo">
+      {% if cfg.has_logo() %}
+        <img src="{{ url_for('static', filename=cfg.logo_file()) }}"
+             alt="Guardian Capital">
+      {% else %}
+        <span class="mh-fallback">G</span>
+      {% endif %}
+    </span>
+    <span class="mh-words">
+      <span class="mh-the">The</span>
+      <span class="mh-name">{{ cfg.SITE_NAME }}</span>
+    </span>
+  </a>
+  <p class="mh-tagline">{{ cfg.SITE_TAGLINE }}</p>
+</div>
+
 <header class="topbar">
   <div class="wrap">
-    <a class="brand" href="{{ url_for('index') }}"><span class="mark">G</span>Guardian&nbsp;Library</a>
     <nav>
       {% for key, label, _desc in cfg.BUCKETS %}
         <a href="{{ url_for('shelf', bucket=key) }}"

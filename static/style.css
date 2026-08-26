@@ -71,6 +71,72 @@ a:hover { text-decoration: underline; }
 
 .wrap { max-width: 1240px; margin: 0 auto; padding: 0 22px; }
 
+
+/* ---------------------------------------------------------------- masthead
+   The house format: logo tile, THE, the wordmark in a high-contrast serif,
+   tagline underneath. Sits above the nav rather than inside it, so the
+   identity reads at a glance and the nav stays a working strip. */
+.masthead {
+  padding: 30px 22px 22px;
+  text-align: center;
+  border-bottom: 1px solid var(--line-soft);
+  background:
+    radial-gradient(620px 200px at 50% -40%, rgba(216,171,95,.10), transparent 70%);
+}
+.mh-inner {
+  display: inline-flex; align-items: center; gap: 20px;
+  color: inherit; text-decoration: none;
+}
+.mh-inner:hover { text-decoration: none; }
+
+.mh-logo {
+  width: 78px; height: 78px; flex-shrink: 0;
+  border-radius: 14px; overflow: hidden;
+  background: #0a0a0a;
+  display: grid; place-items: center;
+  box-shadow: 0 0 0 1px rgba(216,171,95,.28), 0 6px 22px -10px rgba(0,0,0,.85);
+}
+.mh-logo img { width: 100%; height: 100%; object-fit: contain; padding: 8px; }
+.mh-fallback {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 40px; font-weight: 800;
+  background: linear-gradient(145deg, var(--gold), var(--gold-dim));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+.mh-words { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.mh-the {
+  font-size: 12px; font-weight: 700; letter-spacing: .42em;
+  text-transform: uppercase; color: var(--gold);
+  padding-left: 3px;
+}
+.mh-name {
+  font-family: "Playfair Display", Georgia, "Times New Roman", serif;
+  font-size: 46px; font-weight: 800; line-height: 1.02;
+  letter-spacing: -0.6px; color: var(--ink);
+  white-space: nowrap;
+}
+.mh-tagline {
+  font-family: "Playfair Display", Georgia, serif;
+  font-style: italic; font-weight: 500;
+  font-size: 15px; color: var(--muted);
+  margin: 14px 0 0;
+}
+
+@media (max-width: 620px) {
+  .masthead { padding: 22px 16px 16px; }
+  .mh-inner { gap: 14px; }
+  .mh-logo { width: 56px; height: 56px; border-radius: 11px; }
+  .mh-name { font-size: 29px; white-space: normal; text-align: left; }
+  .mh-the { font-size: 10px; letter-spacing: .34em; }
+  .mh-tagline { font-size: 13.5px; margin-top: 10px; }
+}
+
+/* The nav is no longer the top element, so it stops carrying the brand. */
+.topbar { top: 0; }
+.topbar .wrap { justify-content: center; }
+@media (min-width: 861px) { .topbar .wrap { justify-content: flex-start; } }
+
 /* ---------------------------------------------------------------- topbar */
 .topbar {
   background: color-mix(in srgb, var(--bg) 82%, transparent);
