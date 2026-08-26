@@ -71,6 +71,10 @@ jobs:
           fi
 
       - uses: actions/configure-pages@v5
+        with:
+          # Turn Pages on via the API if it has not been enabled by hand, so
+          # the first run does not fail on a setting nobody knew to flip.
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
