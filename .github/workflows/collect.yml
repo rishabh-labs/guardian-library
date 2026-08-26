@@ -74,11 +74,11 @@ jobs:
             git push
           fi
 
+      # Pages must be switched on by hand once, under
+      # Settings -> Pages -> Source -> GitHub Actions. The workflow token is
+      # not allowed to create the site itself: asking it to try fails the run
+      # with "Resource not accessible by integration".
       - uses: actions/configure-pages@v5
-        with:
-          # Turn Pages on via the API if it has not been enabled by hand, so
-          # the first run does not fail on a setting nobody knew to flip.
-          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
