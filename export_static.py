@@ -32,10 +32,19 @@ import app as flask_app  # noqa: E402
 import db  # noqa: E402
 
 
+STATIC_SKIP_BUCKETS = {"inhouse"}
+
+
 def pages():
     """Every URL worth freezing, as (url, path under the output directory)."""
     out = [("/", "index.html")]
     for key, _label, _desc in config.BUCKETS:
+        # Our own videos are streamed from disk by the running portal. A static
+        # host has no such files - and at 175-255 MB each they exceed what
+        # GitHub Pages accepts anyway - so the shelf is left out of the
+        # published copy rather than published with dead play buttons.
+        if key in STATIC_SKIP_BUCKETS:
+            continue
         out.append((f"/shelf/{key}", os.path.join("shelf", key, "index.html")))
     out.append(("/newsletters", os.path.join("newsletters", "index.html")))
     out.append(("/analysis", os.path.join("analysis", "index.html")))

@@ -48,8 +48,12 @@
   <div class="wrap">
     <nav>
       {% for key, label, _desc in cfg.BUCKETS %}
-        <a href="{{ url_for('shelf', bucket=key) }}"
-           class="{{ 'on' if request.endpoint in ('shelf', 'index') and bucket == key }}">{{ label }}</a>
+        {# The in-house shelf needs the running portal to stream from, so it is
+           not part of the static build and must not be linked from it. #}
+        {% if not (cfg.STATIC_EXPORT and key == 'inhouse') %}
+          <a href="{{ url_for('shelf', bucket=key) }}"
+             class="{{ 'on' if request.endpoint in ('shelf', 'index') and bucket == key }}">{{ label }}</a>
+        {% endif %}
       {% endfor %}
       <a href="{{ url_for('newsletters') }}"
          class="{{ 'on' if request.endpoint == 'newsletters' }}">Newsletters</a>

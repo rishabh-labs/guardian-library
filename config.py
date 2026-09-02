@@ -171,7 +171,12 @@ BUCKETS = [
     ("active", "Active Strategies", "Products we hold"),
     ("inactive", "Inactive Strategies", "Products we have exited"),
     ("knowledge", "Knowledge Centre", "Managers we follow to learn from"),
+    ("inhouse", "Guardian Originals", "Videos we made for our clients"),
 ]
+
+# Our own videos live here and are streamed from disk by the portal - never
+# uploaded anywhere. Anything dropped in is picked up by import_media.py.
+MEDIA_DIR = os.environ.get("MEDIA_DIR", os.path.join(BASE_DIR, "media"))
 
 # Off by default: nothing is summarised automatically. A newsletter is
 # summarised only when you open it and ask, so the API bill is a function of

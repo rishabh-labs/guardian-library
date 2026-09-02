@@ -56,6 +56,22 @@
 </div>
 
 <div class="panel">
+  <h2>Our own videos</h2>
+  <p class="hint">
+    Drop video files into <code>{{ cfg.MEDIA_DIR }}</code> and press scan. They
+    are streamed to the team from this machine — never uploaded anywhere — so
+    they stay private, and they only play while this portal is running.
+    The filename becomes the title.
+  </p>
+  <form method="post" action="{{ url_for('scan_media') }}">
+    <button class="btn" type="submit">Scan media folder</button>
+    <span class="quiet" style="margin-left:10px">
+      {{ inhouse_count }} video(s) on the Guardian Originals shelf
+    </span>
+  </form>
+</div>
+
+<div class="panel">
   <h2>Add or edit a fund</h2>
   <p class="hint">Use this for one-off additions. Bulk changes are easier via the Excel import.</p>
   <form method="post" action="{{ url_for('save_fund') }}">

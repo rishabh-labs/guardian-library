@@ -11,7 +11,7 @@ from datetime import timedelta
 from functools import wraps
 
 from flask import (Flask, flash, jsonify, redirect, render_template, request,
-                   session, url_for)
+                   send_from_directory, session, url_for)
 
 import analyse
 import classify
@@ -367,12 +367,14 @@ def logout():
 @admin_required
 def admin():
     funds = db.list_funds()
+    inhouse_count = len(db.query_items(bucket="inhouse", limit=999))
     by_fund = {f["id"]: [] for f in funds}
     for s in db.list_sources():
         by_fund.setdefault(s["fund_id"], []).append(s)
     return render_template("admin.html", funds=funds, sources=by_fund,
                            source_kinds=collectors.SOURCE_KINDS,
                            last_run=db.last_run(),
+                           inhouse_count=inhouse_count,
                            has_yt_key=bool(config.YOUTUBE_API_KEY))
 
 
@@ -465,6 +467,51 @@ def import_excel():
             os.remove(tmp)
         except OSError:
             pass
+    return redirect(url_for("admin"))
+
+
+# ---------------------------------------------------------------- our videos
+
+@app.get("/media/<path:filename>")
+def media(filename):
+    """Stream one of our own videos straight off the disk.
+
+    send_from_directory answers Range requests, which is what lets a browser
+    seek and start playing before the whole file arrives - without it a 255 MB
+    video downloads in full before anything appears. The file is never copied
+    or uploaded anywhere; it is read from MEDIA_DIR on each request, and the
+    team password gate in before_request applies here like everywhere else.
+    """
+    return send_from_directory(config.MEDIA_DIR, filename, conditional=True)
+
+
+@app.get("/watch/<int:item_id>")
+def watch(item_id):
+    """Player page for an in-house video, so it is watched inside the portal
+    rather than dumped into the browser as a bare file."""
+    item = db.get_item(item_id)
+    if not item or not str(item["url"]).startswith("/media/"):
+        return redirect(url_for("index"))
+    db.set_flag(item_id, "seen", 1)
+    return render_template(
+        "watch.html", item=item,
+        insights=db.insights_for([item_id]).get(item_id, []),
+        last_run=db.last_run(), bucket="inhouse")
+
+
+@app.post("/admin/scan-media")
+@admin_required
+def scan_media():
+    """Pick up anything newly dropped into the media folder."""
+    import import_media
+    try:
+        before = len(db.query_items(bucket="inhouse", limit=999))
+        import_media.run()
+        after = len(db.query_items(bucket="inhouse", limit=999))
+        flash(f"Media folder scanned — {after} video(s) on the shelf, "
+              f"{after - before} new.", "ok")
+    except Exception as exc:
+        flash(f"Scan failed: {type(exc).__name__}: {exc}", "error")
     return redirect(url_for("admin"))
 
 

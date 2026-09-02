@@ -18,3 +18,7 @@ venv/
 # every fund and source, so the seed sheet was never actually read - and this
 # repository is public, so the raw list of holdings has no business in it.
 *.xlsx
+
+# Our own videos. Streamed from disk by the portal, far too big for git, and
+# not something to publish - they stay on the machine that serves them.
+media/

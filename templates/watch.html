@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% from "_insights.html" import insight_block %}
+{% block title %}{{ item.title }} — Guardian Library{% endblock %}
+
+{% block content %}
+<p style="margin:0 0 12px">
+  <a class="quiet" href="{{ url_for('shelf', bucket='inhouse') }}">← Guardian Originals</a>
+</p>
+
+<div class="player">
+  {# preload="metadata" so the page shows length and a first frame without
+     pulling hundreds of megabytes before anyone presses play. #}
+  <video controls preload="metadata" playsinline
+         src="{{ item.url }}"
+         {% if item.thumbnail %}poster="{{ item.thumbnail }}"{% endif %}>
+    Your browser cannot play this file.
+    <a href="{{ item.url }}">Download it instead</a>.
+  </video>
+</div>
+
+<h1 class="watch-title">{{ item.title }}</h1>
+<div class="meta" style="margin-bottom:18px">
+  <span class="fundname">{{ item.fund_name }}</span>
+  {% if item.duration_secs %}<span class="quiet">{{ item.duration_secs // 60 }} min</span>{% endif %}
+  <span class="quiet">{{ item.published_at | when }}</span>
+  <span class="tag">in-house</span>
+</div>
+
+<div class="panel">
+  <h2 style="margin-bottom:4px">Insights</h2>
+  <p class="hint">What did you take from this? Everyone on the team sees these.</p>
+  {{ insight_block(item.id, insights) }}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Open the notes straight away on a page whose whole purpose is one video.
+  document.addEventListener('DOMContentLoaded', () => {
+    const box = document.getElementById('ins-{{ item.id }}');
+    if (box) box.hidden = false;
+  });
+</script>
+{% endblock %}

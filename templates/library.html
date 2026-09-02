@@ -123,7 +123,16 @@
   <div class="grid">
     {% for it in items %}
       <article class="card {{ 'unseen' if not it.seen }}" id="item-{{ it.id }}">
-        {% if it.thumbnail %}
+        {% set local = it.url.startswith('/media/') %}
+        {% if local %}
+          {# Our own video: opens the player inside the portal. #}
+          <a class="thumb local" href="{{ url_for('watch', item_id=it.id) }}">
+            {% if cfg.has_logo() %}
+              <img src="{{ url_for('static', filename=cfg.logo_file()) }}" alt="">
+            {% endif %}
+            <span class="play">&#9654;</span>
+          </a>
+        {% elif it.thumbnail %}
           <a class="thumb" href="{{ it.url }}" target="_blank" rel="noopener"
              {% if not cfg.STATIC_EXPORT %}onclick="markSeen({{ it.id }})"{% endif %}>
             <img src="{{ it.thumbnail }}" alt="" loading="lazy">
@@ -148,8 +157,12 @@
             {% endif %}
           </div>
           <h3>
-            <a href="{{ it.url }}" target="_blank" rel="noopener"
-               {% if not cfg.STATIC_EXPORT %}onclick="markSeen({{ it.id }})"{% endif %}>{{ it.title }}</a>
+            {% if local %}
+              <a href="{{ url_for('watch', item_id=it.id) }}">{{ it.title }}</a>
+            {% else %}
+              <a href="{{ it.url }}" target="_blank" rel="noopener"
+                 {% if not cfg.STATIC_EXPORT %}onclick="markSeen({{ it.id }})"{% endif %}>{{ it.title }}</a>
+            {% endif %}
           </h3>
           {% if it.summary %}<div class="sum">{{ it.summary[:180] }}{% if it.summary|length > 180 %}…{% endif %}</div>{% endif %}
           <div class="meta">
