@@ -158,8 +158,13 @@ def shelf(bucket):
     # One toggle relaxes both shelf filters — short videos and other languages
     # are the same kind of "show me everything" request.
     show_all = request.args.get("all") == "1"
-    min_duration = None if show_all else config.MIN_VIDEO_SECONDS
-    english_only = config.ENGLISH_ONLY and not show_all
+    # Our own videos are curated, so none of the shelf filters apply to them.
+    # The 10-minute minimum exists to drop scraped clips; applied here it would
+    # hide two thirds of what the team actually made, most of which is short
+    # by design.
+    unfiltered = bucket == "inhouse"
+    min_duration = None if (show_all or unfiltered) else config.MIN_VIDEO_SECONDS
+    english_only = config.ENGLISH_ONLY and not show_all and not unfiltered
     page = max(request.args.get("page", 1, type=int), 1)
     per_page = 60
 
@@ -168,7 +173,8 @@ def shelf(bucket):
                            include_promo=show_promo,
                            min_duration=min_duration,
                            english_only=english_only,
-                           manager_only=config.MANAGER_ONLY and not show_all,
+                           manager_only=(config.MANAGER_ONLY and not show_all
+                                         and not unfiltered),
                            bucket=bucket,
                            limit=per_page + 1, offset=(page - 1) * per_page)
     has_next = len(items) > per_page

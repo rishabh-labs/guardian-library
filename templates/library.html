@@ -94,7 +94,9 @@
 {% endif %}
 
 <p class="quiet" style="margin:-6px 0 16px">
-  {%- if not show_all %}
+  {%- if bucket == 'inhouse' %}
+    Our own videos, shown in full — no length or language filtering applies here.
+  {%- elif not show_all %}
     Showing English videos over {{ min_minutes }} minutes.
     {% if shelf_hidden.short %}{{ shelf_hidden.short }} shorter{% endif %}
     {%- if shelf_hidden.short and shelf_hidden.other_language %},{% endif %}
