@@ -43,7 +43,9 @@ REM --- open the tunnel and pull the URL out of its log ---------------------
 set LOG=%TEMP%\guardian-tunnel.log
 if exist "%LOG%" del "%LOG%"
 echo   opening the public link...
-start "" /b "%CF%" tunnel --url http://localhost:5055 --logfile "%LOG%"
+REM --protocol http2: this network blocks the default QUIC transport, which
+REM shows up as the tunnel starting but never becoming reachable.
+start "" /b "%CF%" tunnel --protocol http2 --url http://localhost:5055 --logfile "%LOG%"
 
 set URL=
 for /l %%i in (1,1,30) do (
