@@ -63,6 +63,10 @@
               <td>
                 <a href="{{ n.url }}" target="_blank" rel="noopener">{{ n.title }}</a>
                 {% if n.kind == 'document' %}<span class="tag document">PDF</span>{% endif %}
+                {% if n.canonical_url.startswith('upload:') %}
+                  {# Sent to us directly, not found on a website. #}
+                  <span class="tag uploaded" title="Uploaded by the team - not published">uploaded</span>
+                {% endif %}
                 {% set s = summaries.get(n.id) %}
                 {% if s %}
                   <div class="nlsum">

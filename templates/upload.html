@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Upload a newsletter — Guardian Library{% endblock %}
+
+{% block content %}
+<h1 class="shelfhead">Uploaded Newsletters
+  <span class="quiet">— letters the fund houses send us directly</span></h1>
+
+<div class="panel">
+  <h2>Add a newsletter</h2>
+  <p class="hint">
+    For letters a house emails us and never publishes, so the collectors can
+    never find them. Once uploaded they sit on the
+    <a href="{{ url_for('newsletters') }}">Newsletters</a> page beside
+    everything collected from the websites, grouped under the same fund house.
+  </p>
+
+  <form method="post" action="{{ url_for('upload_newsletter') }}"
+        enctype="multipart/form-data">
+    <div class="formrow">
+      <div class="field" style="flex:2; min-width:260px">
+        <label>File(s) — {{ cfg.UPLOAD_EXTENSIONS|join(', ') }}, up to {{ cfg.MAX_UPLOAD_MB }} MB each</label>
+        <input type="file" name="files" multiple required
+               accept="{{ cfg.UPLOAD_EXTENSIONS|join(',') }}">
+      </div>
+    </div>
+
+    <div class="formrow">
+      <div class="field">
+        <label>Fund house</label>
+        <input type="text" name="house" list="houses" required
+               placeholder="e.g. Marcellus" style="min-width:220px">
+        <datalist id="houses">
+          {% for h in houses %}<option value="{{ h }}">{% endfor %}
+        </datalist>
+      </div>
+      <div class="field">
+        <label>Month</label>
+        <input type="month" name="period" value="{{ this_month }}" required>
+      </div>
+      <div class="field" style="flex:1; min-width:220px">
+        <label>Title <span class="quiet">— optional, filename is used otherwise</span></label>
+        <input type="text" name="title" placeholder="Leave blank to use the filename">
+      </div>
+    </div>
+
+    <button class="btn" type="submit">Upload</button>
+  </form>
+</div>
+
+<div class="panel">
+  <h2>Already uploaded
+    <span class="quiet" style="font-weight:400">— {{ uploaded|length }} file(s)</span>
+  </h2>
+
+  {% if not cfg.PUBLISH_UPLOADS %}
+    <p class="hint">
+      These are <strong>not</strong> on the published site at
+      <code>{{ public_url }}</code>, which is open to anyone with the link.
+      They are visible here, on the portal itself. Not even their titles are
+      published.
+    </p>
+  {% else %}
+    <p class="hint warn">
+      <strong>These are being published</strong> to
+      <code>{{ public_url }}</code>, which anyone with the link can read.
+    </p>
+  {% endif %}
+
+  {% if uploaded %}
+    <table>
+      <thead>
+        <tr><th style="width:110px">Month</th><th>Newsletter</th>
+            <th style="width:150px">House</th><th style="width:90px"></th></tr>
+      </thead>
+      <tbody>
+        {% for u in uploaded %}
+          <tr>
+            <td class="quiet" style="white-space:nowrap">{{ u.period }}</td>
+            <td>
+              <a href="{{ u.url }}" target="_blank" rel="noopener">{{ u.title }}</a>
+              <span class="tag uploaded">uploaded</span>
+            </td>
+            <td class="quiet">{{ u.house or u.fund_name }}</td>
+            <td>
+              <form method="post" action="{{ url_for('delete_upload', item_id=u.id) }}"
+                    onsubmit="return confirm('Remove {{ u.title|e }}? The file is deleted too.')">
+                <button class="btn danger sm" type="submit">Remove</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="hint" style="margin:0">Nothing uploaded yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

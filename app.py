@@ -18,6 +18,7 @@ import classify
 import collectors
 import config
 import db
+import uploads_store
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -474,6 +475,72 @@ def import_excel():
         except OSError:
             pass
     return redirect(url_for("admin"))
+
+
+# ------------------------------------------------- uploaded newsletters
+
+@app.get("/uploads/<path:filename>")
+def uploaded_file(filename):
+    """Serve a privately-supplied newsletter from disk."""
+    return send_from_directory(config.UPLOAD_DIR, filename, conditional=True)
+
+
+@app.get("/upload")
+@admin_required
+def upload_page():
+    from datetime import date
+    grouped = db.query_newsletters_by_house()[0]
+    rows = [r for rows_for_house in grouped.values() for r in rows_for_house]
+    uploaded = sorted((r for r in rows if uploads_store.is_upload(r)),
+                      key=lambda r: (r.get("period") or "", r["title"]),
+                      reverse=True)
+    return render_template(
+        "upload.html",
+        houses=sorted({f["house"] for f in db.list_funds() if f["house"]}),
+        uploaded=uploaded,
+        this_month=date.today().strftime("%Y-%m"),
+        public_url="rishabh-labs.github.io/guardian-library",
+        last_run=db.last_run())
+
+
+@app.post("/upload")
+@admin_required
+def upload_newsletter():
+    files = [f for f in request.files.getlist("files") if f and f.filename]
+    if not files:
+        flash("No file chosen.", "error")
+        return redirect(url_for("upload_page"))
+
+    house = request.form.get("house", "")
+    period = request.form.get("period", "")
+    title = request.form.get("title", "")
+
+    added, failed = 0, []
+    for f in files:
+        try:
+            # A title typed once should not be pinned to every file in a batch.
+            uploads_store.store(f, house, period, title if len(files) == 1 else "")
+            added += 1
+        except uploads_store.UploadError as exc:
+            failed.append(str(exc))
+        except Exception as exc:
+            failed.append(f"{f.filename}: {type(exc).__name__}: {exc}")
+
+    if added:
+        flash(f"{added} newsletter(s) uploaded and added to the shelf.", "ok")
+    for msg in failed:
+        flash(msg, "error")
+    return redirect(url_for("upload_page"))
+
+
+@app.post("/upload/<int:item_id>/delete")
+@admin_required
+def delete_upload(item_id):
+    if uploads_store.delete(item_id):
+        flash("Removed, and the file deleted.", "ok")
+    else:
+        flash("That item is not an upload, so it was left alone.", "error")
+    return redirect(url_for("upload_page"))
 
 
 # ---------------------------------------------------------------- our videos

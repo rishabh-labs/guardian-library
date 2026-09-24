@@ -60,6 +60,8 @@
       <a href="{{ url_for('analysis') }}"
          class="{{ 'on' if request.endpoint == 'analysis' }}">Analysis</a>
       {% if not cfg.STATIC_EXPORT %}
+        <a href="{{ url_for('upload_page') }}"
+           class="{{ 'on' if request.endpoint in ('upload_page', 'upload_newsletter') }}">Upload</a>
         <a href="{{ url_for('admin') }}"
            class="{{ 'on' if request.endpoint == 'admin' }}">Admin</a>
       {% endif %}

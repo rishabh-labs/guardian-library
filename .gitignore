@@ -22,3 +22,7 @@ venv/
 # Our own videos. Streamed from disk by the portal, far too big for git, and
 # not something to publish - they stay on the machine that serves them.
 media/
+
+# Newsletters fund houses send us directly. Private by definition - served by
+# the running portal, never committed and never published.
+uploads/

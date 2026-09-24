@@ -78,6 +78,7 @@ def build(outdir):
     if scrubbed:
         print(f"  redacted credentials from {scrubbed} stored field(s)")
 
+
     client = flask_app.app.test_client()
 
     if os.path.isdir(outdir):

@@ -126,6 +126,22 @@ def _base_path():
 
 STATIC_BASE_PATH = _base_path()
 
+# --- Uploaded newsletters ------------------------------------------------
+# Newsletters a fund house sends us directly and never publishes. They are
+# stored here and served by the running portal, exactly like the in-house
+# videos - never committed, never uploaded anywhere.
+UPLOAD_DIR = os.environ.get("UPLOAD_DIR", os.path.join(BASE_DIR, "uploads"))
+
+# Whether privately-supplied newsletters appear on the PUBLISHED copy of the
+# site. Off by default and deliberately so: the published site is open to
+# anyone with the link, and a document a fund house sent us in confidence has
+# no business there. With this off the titles do not appear either.
+PUBLISH_UPLOADS = os.environ.get("PUBLISH_UPLOADS", "0") == "1"
+
+UPLOAD_EXTENSIONS = {".pdf", ".docx", ".doc", ".xlsx", ".xls", ".pptx",
+                     ".png", ".jpg", ".jpeg"}
+MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_MB", "60"))
+
 # --- Masthead -----------------------------------------------------------
 SITE_NAME = os.environ.get("SITE_NAME", "Guardian Library")
 SITE_TAGLINE = os.environ.get(

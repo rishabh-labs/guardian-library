@@ -462,3 +462,9 @@ code {
   color: #1a1206; font-size: 17px; padding-left: 3px;
 }
 .card .thumb { position: relative; }
+
+.tag.uploaded {
+  color: var(--gold);
+  border-color: color-mix(in srgb, var(--gold) 45%, transparent);
+  background: var(--gold-soft);
+}

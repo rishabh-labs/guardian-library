@@ -572,6 +572,11 @@ def query_newsletters_by_house(period=None, search=None, house=None):
          "FROM items i JOIN funds f ON f.id = i.fund_id "
          "WHERE i.kind IN ('newsletter','document')")
     args = []
+    # A newsletter a house sent us in confidence is left out of the published
+    # copy - not the file, not the title. Filtered here rather than removed,
+    # so the running portal keeps showing it and nothing is ever destroyed.
+    if config.STATIC_EXPORT and not config.PUBLISH_UPLOADS:
+        q += " AND i.canonical_url NOT LIKE 'upload:%'"
     if period:
         q += " AND i.period = ?"
         args.append(period)
