@@ -1,11 +1,17 @@
 # Putting Guardian Library on the internet
 
-> **Chosen route: GitHub Actions + GitHub Pages.** Collection runs on GitHub's
-> machines on a schedule, the shelves are published as a static site, and the
-> whole thing costs nothing. The trade-off is that a static page cannot accept
-> writes: Insights, starring, mark-as-read and on-demand Summarise are not part
-> of the published copy. Run the portal locally when you want those.
+> **Live at https://rishabh-labs.github.io/guardian-library/** - GitHub Actions
+> collects every morning at 07:30 IST and republishes the site. Free, permanent,
+> and independent of any laptop being switched on.
 >
+> **No password.** The published site is open to anyone with the link, by
+> choice (2026-09-24). The repository is public, which is what GitHub Pages
+> requires on a free account.
+>
+> **Not on the published copy:** the 31 in-house videos and Insights. Both need
+> a running server - the videos are 165-451 MB each against GitHub's 100 MB
+> per-file limit. Run the portal locally (Share Portal.bat) for those.
+
 ## Visibility: decided
 
 The published site is **public**. On GitHub Free and Pro a Pages site is
