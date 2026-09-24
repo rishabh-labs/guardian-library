@@ -112,6 +112,28 @@ def build(outdir):
     src = os.path.join(config.BASE_DIR, "static")
     shutil.copytree(src, os.path.join(outdir, "static"))
 
+    # Newsletters the team uploaded through GitHub. They are already public -
+    # they live in a public repository - so they ship with the site and their
+    # links resolve. Private uploads are a different thing entirely and are
+    # filtered out of the build by db.query_newsletters_by_house().
+    inbox = os.path.join(config.BASE_DIR, "inbox")
+    if os.path.isdir(inbox):
+        shipped = 0
+        for house in os.listdir(inbox):
+            house_dir = os.path.join(inbox, house)
+            if not os.path.isdir(house_dir):
+                continue
+            for name in os.listdir(house_dir):
+                path = os.path.join(house_dir, name)
+                if not os.path.isfile(path) or name.startswith("."):
+                    continue
+                dest = os.path.join(outdir, "uploads", house, name)
+                os.makedirs(os.path.dirname(dest), exist_ok=True)
+                shutil.copy2(path, dest)
+                shipped += 1
+        if shipped:
+            print(f"  shipped {shipped} uploaded newsletter(s)")
+
     # GitHub Pages runs Jekyll by default, which ignores files and folders
     # starting with an underscore. Nothing here does, but a .nojekyll costs
     # nothing and removes a whole class of confusing absence.

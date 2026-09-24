@@ -56,6 +56,11 @@ jobs:
         # must not stop the site being rebuilt and published from what we have.
         run: python refresh.py || echo "collection had failures - continuing"
 
+      - name: Import newsletters the team uploaded
+        # Anyone with repo access can drop a file into inbox/<Fund House>/
+        # through the GitHub website; this puts it on the Newsletters shelf.
+        run: python import_inbox.py
+
       - name: Build the static site
         # A project site lives under /<repo>/, so every link needs that prefix.
         env:
