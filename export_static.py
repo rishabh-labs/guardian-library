@@ -14,6 +14,7 @@ config.STATIC_EXPORT rather than shipped as a button that does nothing.
 """
 import argparse
 import os
+import re
 import shutil
 import sys
 
@@ -51,6 +52,23 @@ def pages():
     return out
 
 
+ABSOLUTE_URL = re.compile(rb'(href|src)="/(?!/)')
+
+
+def add_base_path(body, base):
+    """Prefix every site-absolute link and asset with the sub-path.
+
+    A project site is served from https://user.github.io/<repo>/, so an href
+    of "/shelf/active" resolves at the domain root and 404s. Rewriting the
+    rendered HTML is deliberate over generating prefixed URLs: it is one
+    substitution with one thing to verify, and it cannot be undone by a shell
+    mangling an environment variable on the way in.
+
+    "//cdn.example.com" (protocol-relative) and "https://..." are left alone.
+    """
+    return ABSOLUTE_URL.sub(rb'\1="' + base.encode() + b'/', body)
+
+
 def build(outdir):
     db.init()
 
@@ -66,16 +84,26 @@ def build(outdir):
         shutil.rmtree(outdir)
     os.makedirs(outdir, exist_ok=True)
 
+    base = config.STATIC_BASE_PATH
+    if base:
+        print(f"  building for a site served at {base}/")
+
     written = 0
     for url, relpath in pages():
+        # SCRIPT_NAME is what makes url_for() emit the sub-path prefix, so the
+        # links and the stylesheet resolve on a project site rather than
+        # pointing at the domain root.
         resp = client.get(url)
         if resp.status_code != 200:
             print(f"  FAIL  {url} returned {resp.status_code}")
             return 1
         dest = os.path.join(outdir, relpath)
         os.makedirs(os.path.dirname(dest), exist_ok=True)
+        body = resp.data
+        if base:
+            body = add_base_path(body, base)
         with open(dest, "wb") as fh:
-            fh.write(resp.data)
+            fh.write(body)
         print(f"  {url:24} -> {relpath}  ({len(resp.data) // 1024} KB)")
         written += 1
 

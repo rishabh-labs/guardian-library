@@ -57,6 +57,9 @@ jobs:
         run: python refresh.py || echo "collection had failures - continuing"
 
       - name: Build the static site
+        # A project site lives under /<repo>/, so every link needs that prefix.
+        env:
+          STATIC_BASE_PATH: /${{ github.event.repository.name }}
         run: python export_static.py --out site
 
       - name: Commit the updated database

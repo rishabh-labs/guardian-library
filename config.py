@@ -106,6 +106,26 @@ ANALYSIS_PROVIDER = os.environ.get("ANALYSIS_PROVIDER", "api")
 # as buttons that silently do nothing.
 STATIC_EXPORT = os.environ.get("STATIC_EXPORT", "0") == "1"
 
+# A GitHub Pages project site is served from a sub-path, not the domain root:
+# https://user.github.io/guardian-library/ rather than https://user.github.io/.
+# Every link and asset has to carry that prefix or the whole site 404s. The
+# workflow derives it from the repository name.
+def _base_path():
+    """The sub-path the published site is served from, e.g. "/guardian-library".
+
+    Normalised defensively: a shell can mangle a bare "/name" into a Windows
+    path on the way in, so only the final segment is trusted.
+    """
+    raw = os.environ.get("STATIC_BASE_PATH", "").strip()
+    if not raw:
+        return ""
+    raw = raw.replace("\\", "/").rstrip("/")
+    segment = raw.rsplit("/", 1)[-1]
+    return "/" + segment if segment else ""
+
+
+STATIC_BASE_PATH = _base_path()
+
 # --- Masthead -----------------------------------------------------------
 SITE_NAME = os.environ.get("SITE_NAME", "Guardian Library")
 SITE_TAGLINE = os.environ.get(
