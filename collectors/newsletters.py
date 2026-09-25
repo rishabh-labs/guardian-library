@@ -458,6 +458,12 @@ def collect_page_pdfs(source):
     window = util.window_days(source)
     include_re, exclude_re = _source_filters(source)
 
+    # A page that builds its list from embedded JSON writes the URLs escaped:
+    # "https:\/\/host\/file.pdf". Unescaping first is what lets one regex
+    # cover both the plain anchors and the JSON payload - without it Buoyant's
+    # July and August factsheets were in the HTML and still invisible.
+    html = html.replace(r"\/", "/")
+
     urls, seen = [], set()
     for match in re.finditer(PDF_URL, html):
         url = match.group(0)

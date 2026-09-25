@@ -32,20 +32,23 @@ SOURCES = {
         # JavaScript, so the visible list only exists here. Found by watching
         # what the browser actually fetches.
         #
-        # The monthly factsheet is "Buoyant-factsheet-<Month>-<Year>.pdf".
+        # Match on "factsheet" alone: they renamed mid-year, from
+        # "Buoyant-factsheet-July-2026.pdf" to
+        # "Buoyant-PMS-Factsheet-Aug-2026.pdf", and a pattern tied to the old
+        # spelling silently stopped finding new months.
         # Not to be confused with "Buoyant-PMS-Flyer", a different and
         # shorter document, nor the Offshore factsheet, which is a
         # different fund.
         ("page_pdfs", "https://www.buoyantcap.com/our-factsheets/?bcembed=1",
          "Buoyant monthly factsheet",
-         r"Buoyant-[Ff]actsheet",
+         r"[Ff]actsheet",
          r"Offshore|Disclaimer|Flyer|Quick-Insights", True),
         # The page lags: July's factsheet was in the media library while the
         # page still stopped at June. Both are read, and the same file from
         # either is one row.
         ("wp_media", "https://www.buoyantcap.com",
          "Buoyant monthly factsheet",
-         r"Buoyant-[Ff]actsheet",
+         r"[Ff]actsheet",
          r"Offshore|Disclaimer|Flyer|Quick-Insights", True),
     ],
     "Ambit": [
