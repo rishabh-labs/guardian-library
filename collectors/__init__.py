@@ -21,6 +21,8 @@ REGISTRY = {
                            "Newsletter URL pattern"),
     "wp_media":        (newsletters.collect_wp_media,
                         "WordPress media library"),
+    "page_pdfs":       (newsletters.collect_page_pdfs,
+                        "Every PDF a page references"),
     "rss":             (news.collect_rss,         "RSS feed"),
     "podcast_feed":    (podcasts.collect_show_feed, "Podcast feed"),
     "page_watch":      (watch.collect_page,       "Website watch"),

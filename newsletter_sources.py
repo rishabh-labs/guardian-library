@@ -33,13 +33,25 @@ SOURCES = {
          "PPFAS Outreach"),
     ],
     "Buoyant": [
-        # https://www.buoyantcap.com/insights/factsheets/ renders with
-        # JavaScript, so it cannot be scraped directly - this reads the same
-        # PDFs from the WordPress media library behind that page. They publish
-        # the monthly factsheet once plain and once per distributor; keep one.
-        ("wp_media", "https://www.buoyantcap.com", "Buoyant PMS factsheet",
-         r"Buoyant-PMS-Flyer(-Axis)?-\d{4}-\d{2}",
-         r"Offshore|Disclaimer", True),
+        # /insights/factsheets/ is a shell that embeds this page over
+        # JavaScript, so the visible list only exists here. Found by watching
+        # what the browser actually fetches.
+        #
+        # The monthly factsheet is "Buoyant-factsheet-<Month>-<Year>.pdf".
+        # Not to be confused with "Buoyant-PMS-Flyer", a different and
+        # shorter document, nor the Offshore factsheet, which is a
+        # different fund.
+        ("page_pdfs", "https://www.buoyantcap.com/our-factsheets/?bcembed=1",
+         "Buoyant monthly factsheet",
+         r"Buoyant-[Ff]actsheet",
+         r"Offshore|Disclaimer|Flyer|Quick-Insights", True),
+        # The page lags: July's factsheet was in the media library while the
+        # page still stopped at June. Both are read, and the same file from
+        # either is one row.
+        ("wp_media", "https://www.buoyantcap.com",
+         "Buoyant monthly factsheet",
+         r"Buoyant-[Ff]actsheet",
+         r"Offshore|Disclaimer|Flyer|Quick-Insights", True),
     ],
     "Ambit": [
         ("wp_media", "https://www.ambit.co", "Ambit newsletters"),

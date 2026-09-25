@@ -302,18 +302,23 @@ def collect_wp_media(source):
     window = util.window_days(source)
 
     entries = []
-    for page in range(1, 4):                 # up to 300 files, newest first
+    for page in range(1, 6):                 # up to 500 files, newest first
         try:
             batch = util.fetch(f"{base}/wp-json/wp/v2/media", params={
                 "per_page": 100, "page": page, "orderby": "date",
                 "order": "desc", "mime_type": "application/pdf"}).json()
         except Exception:
+            # A page past the end returns 400 rather than an empty list, so
+            # this is the normal way the walk finishes.
             break
         if not isinstance(batch, list) or not batch:
             break
         entries.extend(batch)
-        if len(batch) < 100:
-            break
+        # Deliberately no "stop when the page is short" check. WordPress
+        # applies mime_type AFTER paginating, so a full page of 100 uploads
+        # can yield 92 PDFs - and treating that as the end meant only ever
+        # reading the first page. Buoyant's July factsheet sat on page two,
+        # invisible, for exactly this reason.
 
     if not entries:
         raise RuntimeError("no PDFs returned by the WordPress media API")
@@ -353,6 +358,71 @@ def collect_wp_media(source):
         if key in seen:
             continue
         seen.add(key)
+
+        out.append({
+            "fund_id": source["fund_id"],
+            "source_id": source["id"],
+            "kind": "newsletter",
+            "title": title[:300],
+            "url": url,
+            "canonical_url": util.canonicalise(url),
+            "thumbnail": "",
+            "author": source.get("label") or urlparse(base).netloc,
+            "summary": "",
+            "published_at": published,
+            "period": period,
+        })
+
+    if source.get("one_per_period"):
+        out = _one_per_period(out)
+    return out
+
+
+PDF_URL = re.compile(r'''https?://[^"'\s<>]+?\.pdf''', re.I)
+
+
+def collect_page_pdfs(source):
+    """Every PDF a page references, including ones only JavaScript renders.
+
+    Some listing pages hold their documents in embedded JSON rather than in
+    <a href> tags, so a link-walking scraper sees almost nothing: Buoyant's
+    factsheet page carries 79 PDFs but only three anchors. Reading the raw
+    HTML for URLs finds them all, at the cost of also finding whatever else
+    the page links to - which is what the include/exclude filters are for.
+
+    Prefer this over collect_wp_media when the page has a fuller archive than
+    the media library's recent uploads.
+    """
+    base = source["value"]
+    html = util.fetch(base).text
+    window = util.window_days(source)
+    include_re, exclude_re = _source_filters(source)
+
+    urls, seen = [], set()
+    for match in re.finditer(PDF_URL, html):
+        url = match.group(0)
+        if url not in seen:
+            seen.add(url)
+            urls.append(url)
+
+    out = []
+    for url in urls:
+        filename = urlparse(url).path.rsplit("/", 1)[-1]
+        if not _passes_filters(filename, include_re, exclude_re):
+            continue
+
+        title = _title_from_slug(url)
+        if COMPLIANCE_DOC.search(title):
+            continue
+
+        # The filename only - a WordPress upload path carries a /YYYY/MM/ that
+        # says when the file was uploaded, not which month it covers.
+        period = period_from_text(filename)
+        if not period:
+            continue
+        published = period_to_date(period)
+        if util.too_old(published, window):
+            continue
 
         out.append({
             "fund_id": source["fund_id"],

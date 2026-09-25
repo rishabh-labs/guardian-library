@@ -590,10 +590,33 @@ def query_newsletters_by_house(period=None, search=None, house=None):
     rows = [dict(r) for r in conn.execute(q, args).fetchall()]
     conn.close()
 
+    rows = _one_newsletter_per_file(rows)
+
     grouped = {}
     for r in rows:
         grouped.setdefault(r["house"] or r["fund_name"], []).append(r)
     return grouped, len(rows)
+
+
+def _one_newsletter_per_file(rows):
+    """Collapse the same document arriving by more than one route.
+
+    A house's factsheet is often reachable from its listing page and from its
+    media library, and a re-upload changes the folder in the URL without
+    changing the document: .../2026/07/Buoyant-factsheet-June-2026.pdf and
+    .../2026/08/Buoyant-factsheet-June-2026.pdf are one factsheet. Keyed on
+    house, month and filename, so genuinely different documents in the same
+    month both survive.
+    """
+    best = {}
+    order = []
+    for r in rows:
+        filename = str(r.get("url", "")).rstrip("/").rsplit("/", 1)[-1].lower()
+        key = (r.get("house") or r.get("fund_name"), r.get("period"), filename)
+        if key not in best:
+            best[key] = r
+            order.append(key)
+    return [best[k] for k in order]
 
 
 def newsletter_houses():
