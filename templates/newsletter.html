@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% from "_insights.html" import insight_block %}
+{% block title %}{{ item.title }} — Guardian Library{% endblock %}
+
+{% block content %}
+<p style="margin:0 0 12px">
+  <a class="quiet" href="{{ url_for('newsletters') }}">← Newsletters</a>
+</p>
+
+<h1 class="watch-title">{{ item.title }}</h1>
+<div class="meta" style="margin-bottom:18px">
+  <span class="fundname">{{ item.house or item.fund_name }}</span>
+  <span class="quiet">{{ item.period | month_name }}</span>
+  {% if item.kind == 'document' %}<span class="tag document">PDF</span>{% endif %}
+  {% if item.canonical_url.startswith('upload:') or item.canonical_url.startswith('inbox:') %}
+    <span class="tag uploaded">uploaded</span>
+  {% endif %}
+  <a class="btn sm" href="{{ item.url }}" target="_blank" rel="noopener">Open the newsletter</a>
+</div>
+
+{% if summary %}
+  <div class="panel">
+    <div class="nlsum" style="margin:0">
+      <div class="headline">{{ summary.headline }}</div>
+      <p>{{ summary.summary }}</p>
+      {% if summary.highlights %}
+        <ul>{% for h in summary.highlights %}<li>{{ h }}</li>{% endfor %}</ul>
+      {% endif %}
+      {% if summary.portfolio_actions %}
+        <div class="quiet" style="margin-top:8px">
+          <strong>Portfolio actions:</strong> {{ summary.portfolio_actions | join('; ') }}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
+
+<div class="panel">
+  <h2 style="margin-bottom:4px">Insights</h2>
+  <p class="hint">
+    What did you take from this? Everyone on the team sees these, and can add
+    their own.
+  </p>
+
+  {% if cfg.STATIC_EXPORT %}
+    {# A published page cannot write to a database, so the thread lives in
+       GitHub Discussions - one per newsletter, posted to from right here. #}
+    {% if cfg.giscus_ready() %}
+      <script src="https://giscus.app/client.js"
+              data-repo="{{ cfg.GISCUS_REPO }}"
+              data-repo-id="{{ cfg.GISCUS_REPO_ID }}"
+              data-category="{{ cfg.GISCUS_CATEGORY }}"
+              data-category-id="{{ cfg.GISCUS_CATEGORY_ID }}"
+              data-mapping="pathname"
+              data-strict="1"
+              data-reactions-enabled="1"
+              data-emit-metadata="0"
+              data-input-position="top"
+              data-theme="dark_dimmed"
+              data-lang="en"
+              data-loading="lazy"
+              crossorigin="anonymous"
+              async>
+      </script>
+      <noscript>
+        <a href="https://github.com/{{ cfg.GISCUS_REPO }}/discussions">
+          Read and add insights on GitHub Discussions</a>.
+      </noscript>
+    {% else %}
+      <p class="hint">
+        Not connected yet. Turn on Discussions for the repository and install
+        the giscus app, then insights appear here for everyone.
+        <a href="https://github.com/{{ cfg.GISCUS_REPO }}/discussions"
+           target="_blank" rel="noopener">Open Discussions</a>
+      </p>
+    {% endif %}
+  {% else %}
+    {{ insight_block(item.id, insights) }}
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if not cfg.STATIC_EXPORT %}
+<script>
+  // The page exists for one newsletter, so open its notes straight away.
+  document.addEventListener('DOMContentLoaded', () => {
+    const box = document.getElementById('ins-{{ item.id }}');
+    if (box) box.hidden = false;
+  });
+</script>
+{% endif %}
+{% endblock %}

@@ -126,6 +126,24 @@ def _base_path():
 
 STATIC_BASE_PATH = _base_path()
 
+# --- Insights on the published site --------------------------------------
+# The live portal stores insights in its own database. A published static
+# page has nowhere to write, so there it uses GitHub Discussions instead,
+# embedded with giscus: one thread per newsletter, anyone on the team can
+# post, and everyone sees every note.
+#
+# Set up once: Settings -> General -> Features -> tick Discussions, install
+# the giscus app at github.com/apps/giscus, then read the two ids off
+# giscus.app and put them here.
+GISCUS_REPO = os.environ.get("GISCUS_REPO", "rishabh-labs/guardian-library")
+GISCUS_REPO_ID = os.environ.get("GISCUS_REPO_ID", "R_kgDOUEtusw")
+GISCUS_CATEGORY = os.environ.get("GISCUS_CATEGORY", "Insights")
+GISCUS_CATEGORY_ID = os.environ.get("GISCUS_CATEGORY_ID", "")
+
+
+def giscus_ready():
+    return bool(GISCUS_REPO and GISCUS_REPO_ID and GISCUS_CATEGORY_ID)
+
 # --- Uploaded newsletters ------------------------------------------------
 # Newsletters a fund house sends us directly and never publishes. They are
 # stored here and served by the running portal, exactly like the in-house

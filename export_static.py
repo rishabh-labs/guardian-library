@@ -49,6 +49,13 @@ def pages():
         out.append((f"/shelf/{key}", os.path.join("shelf", key, "index.html")))
     out.append(("/newsletters", os.path.join("newsletters", "index.html")))
     out.append(("/analysis", os.path.join("analysis", "index.html")))
+
+    # One page per newsletter. Each carries its own Insights thread, which is
+    # what lets a static site host a conversation at all: the thread is keyed
+    # on the page's address.
+    for row in db.all_newsletter_ids():
+        out.append((f"/newsletter/{row}",
+                    os.path.join("newsletter", str(row), "index.html")))
     return out
 
 

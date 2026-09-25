@@ -619,6 +619,18 @@ def _one_newsletter_per_file(rows):
     return [best[k] for k in order]
 
 
+def all_newsletter_ids():
+    """Ids of every newsletter that should get its own page."""
+    conn = connect()
+    q = ("SELECT i.id FROM items i WHERE i.kind IN ('newsletter','document')")
+    if config.STATIC_EXPORT and not config.PUBLISH_UPLOADS:
+        q += " AND i.canonical_url NOT LIKE 'upload:%'"
+    q += " ORDER BY i.id"
+    rows = [r["id"] for r in conn.execute(q).fetchall()]
+    conn.close()
+    return rows
+
+
 def newsletter_houses():
     conn = connect()
     rows = conn.execute(

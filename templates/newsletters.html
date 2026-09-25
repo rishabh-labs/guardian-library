@@ -83,7 +83,12 @@
                     {% endif %}
                   </div>
                 {% endif %}
-                {% if not cfg.STATIC_EXPORT %}{{ insight_block(n.id, insights.get(n.id, [])) }}{% endif %}
+                <a class="ins-toggle" href="{{ url_for('newsletter', item_id=n.id) }}"
+                   title="Read and add the team's insights on this newsletter">
+                  Insights
+                  {%- set c = insights.get(n.id, []) | length %}
+                  <span class="count" {% if not c %}style="display:none"{% endif %}>{{ c }}</span>
+                </a>
               </td>
               <td style="white-space:nowrap">
                 {% if cfg.STATIC_EXPORT %}

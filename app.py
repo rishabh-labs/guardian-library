@@ -136,6 +136,19 @@ def when(iso):
         return "—"
 
 
+@app.template_filter("month_name")
+def month_name(period):
+    """'2026-08' -> 'August 2026'."""
+    if not period or period == "undated":
+        return "Undated"
+    names = ["", "January", "February", "March", "April", "May", "June",
+             "July", "August", "September", "October", "November", "December"]
+    try:
+        return f"{names[int(period[5:7])]} {period[:4]}"
+    except (ValueError, IndexError):
+        return period
+
+
 # ---------------------------------------------------------------- dashboard
 
 @app.route("/")
@@ -294,6 +307,25 @@ def newsletters():
         filters={"house": house or "", "period": period or "", "q": search or ""},
         total=total,
     )
+
+
+@app.get("/newsletter/<int:item_id>")
+def newsletter(item_id):
+    """One newsletter, with its own Insights thread.
+
+    A page per newsletter is what makes insights work on the published copy:
+    a static site has no database, so the thread is keyed on the page's own
+    address.
+    """
+    item = db.get_item(item_id)
+    if not item or item["kind"] not in ("newsletter", "document"):
+        return redirect(url_for("newsletters"))
+    return render_template(
+        "newsletter.html",
+        item=item,
+        summary=db.summaries_by_item([item_id]).get(item_id),
+        insights=db.insights_for([item_id]).get(item_id, []),
+        last_run=db.last_run())
 
 
 @app.get("/analysis")
