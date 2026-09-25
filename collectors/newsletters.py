@@ -345,12 +345,16 @@ def collect_wp_media(source):
         # full path stamped every policy document with the month it happened to
         # be uploaded, which swept the whole site into the library.
         filename = urlparse(url).path.rsplit("/", 1)[-1]
-        period = period_from_text(title) or period_from_text(filename)
+        period = (period_from_text(title) or period_from_text(filename)
+                  or period_from_month_only(filename)
+                  or period_from_month_only(title))
         if not period:
             continue
         published = period_to_date(period)
         if util.too_old(published, window):
             continue
+        if not url_ok(url):
+            continue                     # still listed, already deleted
 
         # The same newsletter is often uploaded more than once (a re-cut PDF,
         # a copy per distributor). One row per title per month.
@@ -376,6 +380,62 @@ def collect_wp_media(source):
     if source.get("one_per_period"):
         out = _one_per_period(out)
     return out
+
+
+def period_from_month_only(text):
+    """'...-August.pdf' -> this year's August, or last year's if that is ahead.
+
+    A house that names a factsheet by the month alone means the current one.
+    Without this the document falls through to the upload folder in its URL,
+    which is when it was posted, not what it covers - that is how an August
+    factsheet ended up filed under September.
+    """
+    from datetime import date
+    # Only when the text names no year at all. "Offshore-Newsletter-July-2025"
+    # says 2025; guessing the current year there filed a 2025 letter under
+    # 2026.
+    if re.search(r"(19|20)\d{2}", text or ""):
+        return ""
+    m = re.search(r"\b(January|February|March|April|May|June|July|August"
+                  r"|September|October|November|December)\b", text or "", re.I)
+    if not m:
+        return ""
+    month = MONTH_NUMBERS.get(m.group(1).lower())
+    if not month:
+        return ""
+    today = date.today()
+    year = today.year if month <= today.month else today.year - 1
+    return f"{year}-{month:02d}"
+
+
+def url_ok(url, _cache={}):
+    """True when the document is actually downloadable.
+
+    A media library keeps listing files that have been deleted from the
+    server: nine of Fident's nineteen entries were 404s. Checking costs one
+    HEAD per document and is the difference between a library and a list of
+    broken links.
+    """
+    if url in _cache:
+        return _cache[url]
+    ok = False
+    try:
+        r = util.SESSION.head(url, timeout=20, allow_redirects=True)             if hasattr(util, "SESSION") else None
+        if r is None or r.status_code >= 400:
+            import requests
+            r = requests.get(url, timeout=25, stream=True,
+                             headers={"User-Agent": config.USER_AGENT})
+            r.close()
+        ok = r.status_code < 400
+    except Exception:
+        ok = False
+    _cache[url] = ok
+    return ok
+
+
+MONTH_NUMBERS = {m.lower(): i for i, m in enumerate(
+    ["", "january", "february", "march", "april", "may", "june", "july",
+     "august", "september", "october", "november", "december"])}
 
 
 PDF_URL = re.compile(r'''https?://[^"'\s<>]+?\.pdf''', re.I)
@@ -417,12 +477,14 @@ def collect_page_pdfs(source):
 
         # The filename only - a WordPress upload path carries a /YYYY/MM/ that
         # says when the file was uploaded, not which month it covers.
-        period = period_from_text(filename)
+        period = period_from_text(filename) or period_from_month_only(filename)
         if not period:
             continue
         published = period_to_date(period)
         if util.too_old(published, window):
             continue
+        if not url_ok(url):
+            continue                     # listed but deleted from the server
 
         out.append({
             "fund_id": source["fund_id"],

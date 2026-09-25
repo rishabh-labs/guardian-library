@@ -27,11 +27,6 @@ SOURCES = {
         ("newsletter_page", "https://marcellus.in/newsletter-archives/",
          "Marcellus newsletters"),
     ],
-    "PPFAS": [
-        ("newsletter_pattern",
-         "https://amc.ppfas.com/newsletter/{yyyy}/outreach-{month}-{yyyy}/",
-         "PPFAS Outreach"),
-    ],
     "Buoyant": [
         # /insights/factsheets/ is a shell that embeds this page over
         # JavaScript, so the visible list only exists here. Found by watching
@@ -54,15 +49,17 @@ SOURCES = {
          r"Offshore|Disclaimer|Flyer|Quick-Insights", True),
     ],
     "Ambit": [
-        ("wp_media", "https://www.ambit.co", "Ambit newsletters"),
+        ("wp_media", "https://www.ambit.co", "Ambit newsletter",
+         r"Newsletter",
+         r"Track-Record|Portfolio-Pulse|Disclaimer|Disclosure|Offshore", False),
     ],
     "Fident": [
-        ("wp_media", "https://fident.in", "Fident factsheets"),
-        ("newsletter_page", "https://fident.in/insights/", "Fident insights"),
-    ],
-    "VQ": [
-        ("newsletter_page", "https://www.valuequest.in/blog/",
-         "ValueQuest insights"),
+        ("page_pdfs", "https://fident.in/insights/", "Fident factsheet",
+         r"Fident-Factsheet",
+         r"Presentation|FAIR|FIBER|Fiber|Disputes|Disclaimer", True),
+        ("wp_media", "https://fident.in", "Fident factsheet",
+         r"Fident-Factsheet",
+         r"Presentation|FAIR|FIBER|Fiber|Disputes|Disclaimer", True),
     ],
     "Motilal": [
         ("newsletter_page",
