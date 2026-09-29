@@ -468,3 +468,40 @@ code {
   border-color: color-mix(in srgb, var(--gold) 45%, transparent);
   background: var(--gold-soft);
 }
+
+/* ---------------------------------------------------------------- sortbar
+   Sorting and filtering the shelf. Works in the browser, so it is on the
+   published copy too. */
+.sortbar {
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 12px 15px; margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+.sortbar label { display: flex; flex-direction: column; gap: 4px; }
+.sb-label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .6px;
+  color: var(--muted); font-weight: 700;
+}
+.sortbar select { min-width: 150px; }
+.sortbar input[type=search] {
+  background: var(--bg-soft); color: var(--ink); border: 1px solid var(--line);
+  border-radius: var(--radius-sm); padding: 8px 11px; font: inherit;
+  font-size: 14px; min-width: 190px;
+}
+.sortbar input[type=search]:focus {
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+#sb-count { white-space: nowrap; }
+
+@media (max-width: 620px) {
+  .sortbar { gap: 9px; padding: 11px 12px; }
+  /* flex-basis, not width: these are flex items, so width alone leaves them
+     sharing a row and each ends up too narrow to read on a phone. */
+  .sortbar label { flex: 1 1 100%; }
+  .sortbar input[type=search] { flex: 1 1 100%; min-width: 0; }
+  .sortbar select { width: 100%; min-width: 0; }
+  .sortbar .spacer { display: none; }
+  #sb-count { flex: 1 1 auto; }
+}

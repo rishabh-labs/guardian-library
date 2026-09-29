@@ -122,9 +122,37 @@
 </p>
 
 {% if items %}
-  <div class="grid">
+  <div class="sortbar" id="sortbar">
+    <label>
+      <span class="sb-label">Sort</span>
+      <select id="sb-sort">
+        <option value="date-desc">Newest first</option>
+        <option value="date-asc">Oldest first</option>
+        <option value="secs-desc">Longest first</option>
+        <option value="secs-asc">Shortest first</option>
+        <option value="title-asc">Title A–Z</option>
+      </select>
+    </label>
+
+    <label>
+      <span class="sb-label">Fund house</span>
+      <select id="sb-house"><option value="">All fund houses</option></select>
+    </label>
+
+    <input type="search" id="sb-find" placeholder="Search these videos…">
+
+    <div class="spacer"></div>
+    <span class="quiet" id="sb-count"></span>
+    <button class="btn ghost sm" id="sb-clear" type="button">Clear</button>
+  </div>
+
+  <div class="grid" id="grid">
     {% for it in items %}
-      <article class="card {{ 'unseen' if not it.seen }}" id="item-{{ it.id }}">
+      <article class="card {{ 'unseen' if not it.seen }}" id="item-{{ it.id }}"
+               data-house="{{ it.house or it.fund_name }}"
+               data-date="{{ it.published_at or '' }}"
+               data-secs="{{ it.duration_secs or 0 }}"
+               data-title="{{ it.title|lower }}">
         {% set local = it.url.startswith('/media/') %}
         {% if local %}
           {# Our own video: opens the player inside the portal. #}
@@ -216,6 +244,89 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+/* Sorting and filtering happen in the browser, on the cards already in the
+   page. That is what lets them work on the published copy, which has no
+   server to ask. */
+(function () {
+  const grid  = document.getElementById('grid');
+  const bar   = document.getElementById('sortbar');
+  if (!grid || !bar) return;
+
+  const cards = Array.from(grid.querySelectorAll('.card'));
+  const sort  = document.getElementById('sb-sort');
+  const house = document.getElementById('sb-house');
+  const find  = document.getElementById('sb-find');
+  const count = document.getElementById('sb-count');
+  const clear = document.getElementById('sb-clear');
+  const KEY   = 'gl_shelf_' + (location.pathname || '/');
+
+  // The dropdown is built from the shelf itself, so it never offers a house
+  // with nothing behind it.
+  Array.from(new Set(cards.map(c => c.dataset.house).filter(Boolean)))
+    .sort((a, b) => a.localeCompare(b))
+    .forEach(h => {
+      const o = document.createElement('option');
+      o.value = h; o.textContent = h;
+      house.append(o);
+    });
+
+  const num  = c => parseInt(c.dataset.secs || '0', 10);
+  const date = c => Date.parse(c.dataset.date || '') || 0;
+
+  const SORTS = {
+    'date-desc':  (a, b) => date(b) - date(a),
+    'date-asc':   (a, b) => date(a) - date(b),
+    'secs-desc':  (a, b) => num(b) - num(a),
+    'secs-asc':   (a, b) => num(a) - num(b),
+    'title-asc':  (a, b) => (a.dataset.title || '').localeCompare(b.dataset.title || ''),
+  };
+
+  function apply() {
+    const h = house.value;
+    const q = (find.value || '').trim().toLowerCase();
+
+    let shown = 0;
+    cards.forEach(c => {
+      const okHouse = !h || c.dataset.house === h;
+      const okText  = !q || (c.dataset.title || '').includes(q)
+                        || (c.dataset.house || '').toLowerCase().includes(q);
+      const on = okHouse && okText;
+      c.style.display = on ? '' : 'none';
+      if (on) shown++;
+    });
+
+    cards.slice().sort(SORTS[sort.value] || SORTS['date-desc'])
+         .forEach(c => grid.append(c));
+
+    count.textContent = shown === cards.length
+      ? cards.length + ' videos'
+      : shown + ' of ' + cards.length + ' videos';
+    clear.style.visibility = (h || q || sort.value !== 'date-desc') ? '' : 'hidden';
+
+    try {
+      localStorage.setItem(KEY, JSON.stringify({s: sort.value, h: h, q: q}));
+    } catch (e) { /* private window - the shelf still works */ }
+  }
+
+  // Come back to a shelf and it is the way you left it.
+  try {
+    const saved = JSON.parse(localStorage.getItem(KEY) || '{}');
+    if (saved.s && SORTS[saved.s]) sort.value = saved.s;
+    if (saved.h) house.value = saved.h;
+    if (saved.q) find.value = saved.q;
+  } catch (e) { /* ignore */ }
+
+  [sort, house].forEach(el => el.addEventListener('change', apply));
+  find.addEventListener('input', apply);
+  clear.addEventListener('click', () => {
+    sort.value = 'date-desc'; house.value = ''; find.value = ''; apply();
+  });
+
+  apply();
+})();
+</script>
+
 <script>
 function markSeen(id, btn) {
   post('/item/' + id + '/seen', {value: 1});
