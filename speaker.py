@@ -49,10 +49,21 @@ STOCK_TIP = re.compile(
     r"\bbreakout stock\b|\bstock to (buy|watch) (now|today)\b", re.I)
 
 # An interview framing is a positive signal: the manager is the subject.
+#
+# The second group is how Indian business television actually writes its
+# descriptions. A CNBC-TV18 clip is titled with the view and never the person
+# - "Underweight On Metals And Commodity Businesses: Motilal Oswal AMC" - and
+# names the guest only underneath, as "Atul Mehra, Motilal Oswal AMC To
+# @CNBCTV18News". Without these the name sat in the description with no
+# framing the rule recognised, and the appearance was filed as somebody
+# else's video about the fund. It was hiding interviews across ten houses.
 INTERVIEW_PHRASES = re.compile(
     r"\bin conversation\b|\binterview\b|\bexclusive\b|\bspeaks? (to|with)\b|"
     r"\btalks? (to|about)\b|\bfireside\b|\bpodcast\b|\bepisode\b|\bAMA\b|"
-    r"\bon (the )?(markets?|outlook|portfolio|strategy)\b", re.I)
+    r"\bon (the )?(markets?|outlook|portfolio|strategy)\b|"
+    r"\btells\b|\bexplains\b|\bin this (episode|conversation)\b|"
+    r"\b(to|with)\s+@?(cnbc|ndtv|et ?now|mint|moneycontrol|business today|"
+    r"bloomberg|zee business|financial express)", re.I)
 
 
 def name_variants(full_name):

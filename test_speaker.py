@@ -9,7 +9,7 @@ from speaker import detect
 MANAGERS = ["Chandraprakash Padiyar", "Saurabh Mukherjea", "Jigar Mistry",
             "Kenneth Andrade", "Rajeev Thakkar", "Nilesh Shah",
             "Sunil Singhania", "Samir Arora", "Shibani Kurian",
-            "Ramdeo Agarwal"]
+            "Ramdeo Agarwal", "Ajay Khandelwal", "Atul Mehra"]
 
 # (title, from_own_channel, expected, note)
 CASES = [
@@ -81,6 +81,32 @@ CASES = [
      "third_party", "sectors, not a pick - but nobody tracked is named"),
 ]
 
+# Business television titles a clip with the view and names the guest only in
+# the description. These are real pairs from CNBC-TV18 and the fund houses.
+# (title, description, expected, note)
+DESC_CASES = [
+    ("Underweight On Metals And Commodity Businesses: Motilal Oswal AMC",
+     "AlphaManagers | Atul Mehra, Motilal Oswal AMC To @CNBCTV18News * "
+     "Underweight on metals and commodity businesses",
+     "manager", "named underneath, attributed to the channel"),
+    ("Indices Open Higher | Market Seems Fairly Valued",
+     "MarketOutlook | D-Street: Positive Start To Trade OldBridge Asset "
+     "Management's Kenneth Andrade to CNBC-TV18",
+     "manager", "possessive form of the same convention"),
+    ("Earnings Upgrades Seen After Six Quarters: Motilal Oswal MF",
+     "MarketOutlook | Ajay Khandelwal, Motilal Oswal MF tells @CNBCTV18News",
+     "manager", "tells the channel"),
+    ("Why Parag Parikh Flexi Cap Is Underperforming?",
+     "Fund CIO Rajeev Thakkar explains the reasons behind it",
+     "manager", "the house's own 'X explains' format"),
+    ("Where should you put your money in 2027?",
+     "Our analyst breaks down what Kenneth Andrade has been buying lately",
+     "third_party", "named, but it is somebody else's video about him"),
+    ("Top 5 PMS Schemes Reviewed",
+     "We rate the schemes run by Saurabh Mukherjea and others",
+     "third_party", "review phrasing wins over a name in the description"),
+]
+
 
 def main():
     failures = []
@@ -92,12 +118,20 @@ def main():
         flag = "ok  " if ok else "FAIL"
         print(f"  {flag} [{got:11}] {title[:52]:54} {note}")
 
+    print("\n=== named only in the description ===")
+    for title, desc, expected, note in DESC_CASES:
+        got, why = detect(title, desc, managers=MANAGERS)
+        ok = got == expected
+        if not ok:
+            failures.append(f"{title[:44]!r}: got {got}, expected {expected} ({why})")
+        print(f"  {'ok  ' if ok else 'FAIL'} [{got:11}] {title[:46]:48} {note}")
+
     if failures:
         print(f"\n{len(failures)} FAILURE(S):")
         for f in failures:
             print("  " + f)
         return 1
-    print(f"\nall {len(CASES)} cases correct")
+    print(f"\nall {len(CASES) + len(DESC_CASES)} cases correct")
     return 0
 
 
