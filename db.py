@@ -168,15 +168,30 @@ def init():
 
 # ---------------------------------------------------------------- funds
 
+def bucket_clause(bucket, column="f.bucket"):
+    """SQL and arguments narrowing a query to one bucket or several.
+
+    A shelf can cover more than one bucket - held and exited products share
+    one - so everything that filters by bucket accepts either a name or a
+    list of them.
+    """
+    if not bucket:
+        return "", []
+    names = [bucket] if isinstance(bucket, str) else list(bucket)
+    if not names:
+        return "", []
+    return f" AND {column} IN ({','.join('?' * len(names))})", names
+
+
 def list_funds(active_only=False, bucket=None):
     conn = connect()
     q = "SELECT * FROM funds WHERE 1=1"
     args = []
     if active_only:
         q += " AND active = 1"
-    if bucket:
-        q += " AND bucket = ?"
-        args.append(bucket)
+    clause, bargs = bucket_clause(bucket, column="bucket")
+    q += clause
+    args += bargs
     q += " ORDER BY house, name"
     rows = conn.execute(q, args).fetchall()
     conn.close()
@@ -427,9 +442,9 @@ def query_items(fund_id=None, kind=None, search=None, unseen_only=False,
          f"{DUPE_KEY} AS dupe_key "
          "FROM items i JOIN funds f ON f.id = i.fund_id WHERE 1=1")
     args = []
-    if bucket:
-        q += " AND f.bucket = ?"
-        args.append(bucket)
+    clause, bargs = bucket_clause(bucket)
+    q += clause
+    args += bargs
     if manager_only:
         # Keep the manager's own content; drop other people's videos about the
         # fund. Unjudged rows ('') are kept so a classifier gap never empties
@@ -494,9 +509,9 @@ def promo_count(fund_id=None, bucket=None):
     if fund_id:
         q += " AND i.fund_id = ?"
         args.append(fund_id)
-    if bucket:
-        q += " AND f.bucket = ?"
-        args.append(bucket)
+    clause, bargs = bucket_clause(bucket)
+    q += clause
+    args += bargs
     row = conn.execute(q, args).fetchone()
     conn.close()
     return row["c"]
@@ -517,9 +532,9 @@ def shelf_hidden_counts(fund_id=None, min_duration=None, english_only=False,
     if fund_id:
         base += " AND i.fund_id = ?"
         args.append(fund_id)
-    if bucket:
-        base += " AND f.bucket = ?"
-        args.append(bucket)
+    clause, bargs = bucket_clause(bucket)
+    base += clause
+    args += bargs
 
     short = 0
     if min_duration:
@@ -554,7 +569,8 @@ def bucket_counts():
     out = {}
     for key, _label, _desc in config.BUCKETS:
         out[key] = len(query_items(
-            kind=["video", "podcast"], bucket=key, include_promo=False,
+            kind=["video", "podcast"], bucket=config.buckets_for(key),
+            include_promo=False,
             min_duration=config.MIN_VIDEO_SECONDS,
             english_only=config.ENGLISH_ONLY,
             manager_only=config.MANAGER_ONLY, limit=100000))
@@ -1010,8 +1026,17 @@ def finish_run(run_id, new_items, ok, fail, detail=""):
 
 
 def last_run():
+    """The most recent completed collection pass.
+
+    A run that never finished - the laptop slept, the process was killed
+    mid-cycle - leaves a row with no finish time, and reading the newest row
+    regardless showed "last checked —" on a site that had in fact been
+    collecting fine that morning. The newest *finished* run is the honest
+    answer; an unfinished one says nothing about when we last had data.
+    """
     conn = connect()
     row = conn.execute(
-        "SELECT * FROM runs ORDER BY id DESC LIMIT 1").fetchone()
+        "SELECT * FROM runs WHERE finished_at IS NOT NULL "
+        "ORDER BY id DESC LIMIT 1").fetchone()
     conn.close()
     return dict(row) if row else None

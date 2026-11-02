@@ -153,13 +153,19 @@ def month_name(period):
 
 @app.route("/")
 def index():
-    return shelf("active")
+    return shelf("strategies")
 
 
 @app.get("/shelf/<bucket>")
 def shelf(bucket):
+    # Active and Inactive were separate shelves once. Somebody has that link.
+    if bucket in config.RETIRED_SHELVES:
+        return redirect(url_for("shelf", bucket=config.RETIRED_SHELVES[bucket]))
     if bucket not in {b[0] for b in config.BUCKETS}:
         return redirect(url_for("index"))
+    # A shelf may cover several fund buckets, so everything below filters on
+    # the list rather than on the shelf's own name.
+    buckets = config.buckets_for(bucket)
     fund_id = request.args.get("fund", type=int)
     # The main library is the video/podcast shelf; newsletters have their own tab.
     kind = ["video", "podcast"]
@@ -194,7 +200,7 @@ def shelf(bucket):
                            english_only=english_only,
                            manager_only=(config.MANAGER_ONLY and not show_all
                                          and not unfiltered),
-                           bucket=bucket,
+                           bucket=buckets,
                            limit=per_page + 1, offset=(page - 1) * per_page)
     has_next = len(items) > per_page
     items = items[:per_page]
@@ -202,18 +208,18 @@ def shelf(bucket):
     return render_template(
         "library.html",
         items=items,
-        funds=db.list_funds(bucket=bucket),
+        funds=db.list_funds(bucket=buckets),
         bucket=bucket,
         buckets=config.BUCKETS,
         bucket_counts=db.bucket_counts(),
         unseen_counts=db.unseen_counts(),
         kind_labels=KIND_LABELS,
         last_run=db.last_run(),
-        promo_hidden=db.promo_count(fund_id=fund_id, bucket=bucket),
+        promo_hidden=db.promo_count(fund_id=fund_id, bucket=buckets),
         show_promo=show_promo,
         show_all=show_all,
         shelf_hidden=db.shelf_hidden_counts(
-            fund_id=fund_id, bucket=bucket,
+            fund_id=fund_id, bucket=buckets,
             min_duration=config.MIN_VIDEO_SECONDS,
             english_only=config.ENGLISH_ONLY,
             manager_only=config.MANAGER_ONLY),

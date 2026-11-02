@@ -220,13 +220,28 @@ ENGLISH_ONLY = os.environ.get("ENGLISH_ONLY", "1") == "1"
 # only the second is worth watching closely.
 MANAGER_ONLY = os.environ.get("MANAGER_ONLY", "1") == "1"
 
-# The three video shelves, in nav order.
+# The video shelves, in nav order.
 BUCKETS = [
-    ("active", "Active Strategies", "Products we hold"),
-    ("inactive", "Inactive Strategies", "Products we have exited"),
+    ("strategies", "Strategies", "Products we hold and have held"),
     ("knowledge", "Knowledge Centre", "Managers we follow to learn from"),
     ("inhouse", "Guardian Originals", "Videos we made for our clients"),
 ]
+
+# A shelf can draw on more than one bucket of funds. Held and exited products
+# share one, because what a manager said is worth reading either way and the
+# split only made the fund-house filter choose between two short lists. The
+# funds table still records which is which, so the two can be pulled apart
+# again without going back through the history.
+SHELF_MEMBERS = {"strategies": ["active", "inactive"]}
+
+# Shelves that no longer exist, pointed at the one that replaced them, so a
+# link somebody saved still lands somewhere.
+RETIRED_SHELVES = {"active": "strategies", "inactive": "strategies"}
+
+
+def buckets_for(shelf):
+    """The fund buckets a shelf covers."""
+    return SHELF_MEMBERS.get(shelf, [shelf])
 
 # Our own videos live here and are streamed from disk by the portal - never
 # uploaded anywhere. Anything dropped in is picked up by import_media.py.

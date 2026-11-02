@@ -115,6 +115,23 @@ def build(outdir):
         print(f"  {url:24} -> {relpath}  ({len(resp.data) // 1024} KB)")
         written += 1
 
+    # A static host cannot answer a redirect, so a shelf that no longer exists
+    # gets a small page that sends the browser on instead. Colleagues were
+    # handed these links before the two strategy shelves were merged.
+    for gone, now in config.RETIRED_SHELVES.items():
+        # base already carries its leading slash, and "//name/..." would read
+        # as a host rather than a path and send the reader off the site.
+        target = f"{base}/shelf/{now}"
+        dest = os.path.join(outdir, "shelf", gone, "index.html")
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        with open(dest, "w", encoding="utf-8") as fh:
+            fh.write('<!doctype html><meta charset="utf-8">'
+                     f'<meta http-equiv="refresh" content="0; url={target}">'
+                     '<title>Moved</title>'
+                     f'<p>This shelf has moved. <a href="{target}">Continue</a>.')
+        print(f"  /shelf/{gone:17} -> redirect to /shelf/{now}")
+        written += 1
+
     # The stylesheet is the only asset; everything else is a remote thumbnail.
     src = os.path.join(config.BASE_DIR, "static")
     shutil.copytree(src, os.path.join(outdir, "static"))
