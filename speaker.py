@@ -24,6 +24,30 @@ REVIEW_PHRASES = re.compile(
     r"\breturns? (analysis|breakdown)\b|\bperformance (review|analysis)\b|"
     r"\bfund analysis\b|\bdeep dive into\b", re.I)
 
+# A video can name the manager and still not be his. A television desk runs a
+# segment on a stock he happens to hold, with him as the subject in the third
+# person rather than the voice in the room: "Ace Investors Kela & Singhania
+# Back This Stock" is a tip sheet about a company, not Sunil Singhania talking.
+#
+# The giveaway is that the subject is a single stock and the manager appears
+# only as the person who owns it. Commentary he actually gives - "Samir
+# Arora's Big Market Bet: Why NBFCs Over Banks" - reads nothing like this,
+# which is why these phrases are specific rather than merely stock-flavoured.
+STOCK_TIP = re.compile(
+    r"\bbacks? th(is|ese) (stock|share|counter)|"
+    r"[-\s]backed (stock|share|counter)|"
+    r"\b(buys?|bought|sells?|sold|offloads?|exits?|trims?|adds?|raises?|hikes?|"
+    r"cuts?|picks? up|picked up)\b[^|]{0,40}\bstake\b|"
+    r"\bstake\b[^|]{0,30}\b(liya|kharida|becha|badhaya)\b|"
+    # The same report in Hindi: "ne kharide ye stocks", "mein stake liya".
+    r"ने (खरीदे|बेचे|खरीदा|बेचा)|में स्टेक|\bne kharide\b|"
+    r"\bup move\b|\btarget price\b|\bshare price target\b|"
+    # Bare "multibagger" is a hashtag half the finance channels on YouTube
+    # attach to everything, the manager's own clips included. It only means
+    # anything when it is qualifying a particular pick.
+    r"\bmultibagger (stock|share|pick|counter|idea|bet)|"
+    r"\bbreakout stock\b|\bstock to (buy|watch) (now|today)\b", re.I)
+
 # An interview framing is a positive signal: the manager is the subject.
 INTERVIEW_PHRASES = re.compile(
     r"\bin conversation\b|\binterview\b|\bexclusive\b|\bspeaks? (to|with)\b|"
@@ -63,6 +87,11 @@ def detect(title, description="", channel="", managers=(),
     # The house's own channel only publishes the house's own content.
     if from_own_channel:
         return "manager", "the house's own channel"
+
+    # A tip sheet about a stock he holds names him too, so this is asked
+    # before the title rule rather than after it.
+    if STOCK_TIP.search(title):
+        return "third_party", "a segment about a stock, not the manager"
 
     in_title = names_present(title, managers)
     if in_title:

@@ -7,7 +7,9 @@ import sys
 from speaker import detect
 
 MANAGERS = ["Chandraprakash Padiyar", "Saurabh Mukherjea", "Jigar Mistry",
-            "Kenneth Andrade", "Rajeev Thakkar", "Nilesh Shah"]
+            "Kenneth Andrade", "Rajeev Thakkar", "Nilesh Shah",
+            "Sunil Singhania", "Samir Arora", "Shibani Kurian",
+            "Ramdeo Agarwal"]
 
 # (title, from_own_channel, expected, note)
 CASES = [
@@ -43,6 +45,40 @@ CASES = [
      "performance analysis, nobody named"),
     ("Ambit Small Cap Fund explained", False, "third_party",
      "explainer by an outsider, no manager"),
+
+    # --- a segment about a stock he holds: drop, even though he is named ---
+    # All three were on the Abakkus shelf and are what prompted the rule.
+    ("Ace Investors Madhusudan Kela & Sunil Singhania Back This Stock, "
+     "Should You Hike Exposure?", False, "third_party",
+     "tip sheet, manager named as the backer"),
+    ("Can You Expect An Up Move In This Sunil Singhania's Abakkus-Backed "
+     "Stock?", False, "third_party", "technical call on a stock he holds"),
+    ("Sunil Singhania (Abakkus) Ne Sejal Glass Mein Stake Liya! Q4 Huge "
+     "Profit", False, "third_party", "Hindi report of a stake purchase"),
+    ("Marcellus Buys 2% Stake In Divi's Labs", False, "third_party",
+     "trade report, house named not manager"),
+    ("Nilesh Shah's Multibagger Pick For 2027", False, "third_party",
+     "stock tip wearing his name"),
+    ("Sunil Singhania ने खरीदे ये Small Cap Stocks! Abakkus Fund की बड़ी खरीदारी",
+     False, "third_party", "the same trade report in Hindi"),
+    ("ये 4 Small Cap Stocks Sunil Singhania ने खरीदे #investing", False,
+     "third_party", "Hindi, manager as the subject of the trade"),
+
+    # ...but ordinary market commentary that merely mentions stocks is his.
+    ("Samir Arora's Big Market Bet: Why NBFCs Over Banks & New-Age Stocks",
+     False, "manager", "his call on sectors, not a single-stock tip"),
+    ("Stock Picks To Watch: Shibani Kurian Reveals Kotak AMC's Market Bets",
+     False, "manager", "she is the one revealing them"),
+    ("Why Owning 50 Indian Stocks Is NOT Diversification | Saurabh Mukherjea",
+     False, "manager", "stocks in the title, still his argument"),
+    ("Kenneth Andrade on why he exited the stock last quarter", False,
+     "manager", "he explains his own trade"),
+    # "multibagger" is a hashtag half of finance YouTube attaches to
+    # everything, the managers' own clips included. Bare, it means nothing.
+    ("Ramdeo Agarwal:- How to Find blue chip Stocks #financialeducation "
+     "#multibagger", False, "manager", "a hashtag is not a stock tip"),
+    ("India's Next Multibagger Sectors? Abakkus Experts Weigh In", False,
+     "third_party", "sectors, not a pick - but nobody tracked is named"),
 ]
 
 
