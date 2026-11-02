@@ -180,7 +180,12 @@ def shelf(bucket):
     min_duration = None if (show_all or unfiltered) else config.MIN_VIDEO_SECONDS
     english_only = config.ENGLISH_ONLY and not show_all and not unfiltered
     page = max(request.args.get("page", 1, type=int), 1)
-    per_page = 60
+    # The published site is one file per shelf: a "next page" link there points
+    # at /shelf/active?page=2, which no static host can answer, so everything
+    # past the first 60 was unreachable. Sorting and filtering happen in the
+    # browser too, and can only see the cards the page actually carries. So the
+    # exported shelf holds the whole thing; the running portal still pages.
+    per_page = 100000 if config.STATIC_EXPORT else 60
 
     items = db.query_items(fund_id=fund_id, kind=kind, search=search,
                            unseen_only=unseen, starred_only=starred,

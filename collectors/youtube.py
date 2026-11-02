@@ -93,8 +93,55 @@ def resolve_channel_id(value):
         f"UC... id directly.")
 
 
+def _channel_filters(source):
+    """Compiled (include, exclude) for a channel source, or (None, None)."""
+    def _compile(key):
+        raw = (source.get(key) or "").strip()
+        if not raw:
+            return None
+        try:
+            return re.compile(raw, re.I)
+        except re.error as exc:
+            log.warning("bad regex on source %s: %s", source.get("id"), exc)
+            return None
+    return _compile("include_re"), _compile("exclude_re")
+
+
+def _entry_summary(entry):
+    """The description a YouTube Atom entry carries, if any."""
+    media = entry.get("media_description") or ""
+    if media:
+        return media
+    content = entry.get("summary") or ""
+    return content
+
+
+def entry_allowed(entry, include_re, exclude_re):
+    """Whether one feed entry passes a channel source's filters.
+
+    Judged on the title and the description together: a television channel
+    titles a clip "Where Are The Opportunities Now?" and names the guest only
+    in the description, so matching on the title alone loses the appearance.
+    """
+    if not (include_re or exclude_re):
+        return True
+    blob = f"{entry.get('title', '')} {_entry_summary(entry)}"
+    if include_re and not include_re.search(blob):
+        return False
+    if exclude_re and exclude_re.search(blob):
+        return False
+    return True
+
+
 def collect_channel(source):
-    """Uploads from one channel. Trusted source - no relevance filtering."""
+    """Uploads from one channel.
+
+    A fund house's own channel is trusted: everything on it is theirs, so no
+    filtering. A media channel - ET Now, Mint, moneycontrol - is a different
+    thing: it publishes dozens of videos a day and we want only the ones our
+    manager is actually in. Give those sources an include_re of the manager
+    names and the feed is filtered to them.
+    """
     channel_id = resolve_channel_id(source["value"])
 
     # Cache the resolved id back onto the source so later polls skip the lookup.
@@ -119,10 +166,13 @@ def collect_channel(source):
 
     feed = feedparser.parse(CHANNEL_FEED.format(channel_id))
     window = util.window_days(source)
+    include_re, exclude_re = _channel_filters(source)
     out = []
     for e in feed.entries:
         published = util.parse_date(e.get("published"))
         if util.too_old(published, window):
+            continue
+        if not entry_allowed(e, include_re, exclude_re):
             continue
         thumb = ""
         media = e.get("media_thumbnail") or []
